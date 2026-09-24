@@ -1,19 +1,25 @@
 package com.hexaware.portfolio.batch.config;
 
-import java.util.Collections;
-
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.support.ListItemReader;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import com.hexaware.portfolio.batch.model.HistoricalPriceRow;
+import com.hexaware.portfolio.batch.processor.HistoricalPriceProcessor;
+import com.hexaware.portfolio.batch.reader.HistoricalPriceCsvReader;
+import com.hexaware.portfolio.batch.writer.HistoricalPriceWriter;
+import com.hexaware.portfolio.security.entity.DailyPrice;
+
+import java.nio.file.Path;
 
 @Configuration
 public class BatchConfig {
@@ -27,37 +33,37 @@ public class BatchConfig {
     }
 
     @Bean
-    public Job priceLoadJob(Step priceLoadStep) {
-        return new JobBuilder("priceLoadJob", jobRepository)
-                .start(priceLoadStep)
+    public Job historicalPriceImportJob(Step historicalPriceStep) {
+        return new JobBuilder("historicalPriceImportJob", jobRepository)
+                .start(historicalPriceStep)
                 .build();
     }
 
     @Bean
-    public Step priceLoadStep(ItemReader<Object> priceCsvReader,
-                             ItemProcessor<Object, Object> priceProcessor,
-                             ItemWriter<Object> dailyPriceWriter) {
-        return new StepBuilder("priceLoadStep", jobRepository)
-                .<Object, Object>chunk(500, transactionManager)
-                .reader(priceCsvReader)
-                .processor(priceProcessor)
-                .writer(dailyPriceWriter)
+    public Step historicalPriceStep(ItemReader<HistoricalPriceRow> historicalPriceReader,
+            ItemProcessor<HistoricalPriceRow, DailyPrice> historicalPriceProcessor,
+            HistoricalPriceWriter historicalPriceWriter) {
+        return new StepBuilder("historicalPriceStep", jobRepository)
+                .<HistoricalPriceRow, DailyPrice>chunk(500, transactionManager)
+                .reader(historicalPriceReader)
+                .processor(historicalPriceProcessor)
+                .writer(historicalPriceWriter)
                 .build();
     }
 
     @Bean
-    public ItemReader<Object> priceCsvReader() {
-        return new ListItemReader<>(Collections.emptyList());
+    @StepScope
+    public HistoricalPriceCsvReader historicalPriceReader(
+            @Value("#{jobParameters['inputFile']}") String inputFile) throws Exception {
+        return new HistoricalPriceCsvReader(Path.of(inputFile));
     }
 
     @Bean
-    public ItemProcessor<Object, Object> priceProcessor() {
-        return item -> item;
-    }
-
-    @Bean
-    public ItemWriter<Object> dailyPriceWriter() {
-        return items -> {
-        };
+    @StepScope
+    public HistoricalPriceProcessor historicalPriceProcessor(
+            @Value("#{jobParameters['isin']}") String isin,
+            @Value("#{jobParameters['symbol']}") String symbol,
+            @Value("#{jobParameters['series']}") String series) {
+        return new HistoricalPriceProcessor(isin, symbol, series);
     }
 }
