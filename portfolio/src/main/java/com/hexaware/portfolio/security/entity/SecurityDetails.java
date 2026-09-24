@@ -1,18 +1,53 @@
 package com.hexaware.portfolio.security.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-import lombok.Data;
+import java.time.LocalDateTime;
 
-@Entity 
-@Data 
-@Table(name = "security_details",
-	uniqueConstraints = @UniqueConstraint(
-		name = "uk_security_exchange_symbol",
-		columnNames = {"exchange", "symbol"}
-	)
-)
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Entity
+@Table(name = "stoks_master")
+@Getter
+@Setter
+@NoArgsConstructor
 public class SecurityDetails {
-    
+
+    @Id
+    @Column(name = "isin", nullable = false, length = 12)
+    private String isin;
+
+    @Column(name = "symbol", nullable = false, length = 20)
+    private String symbol;
+
+    @Column(name = "series", nullable = false, length = 5)
+    private String series;
+
+    @Column(name = "description", nullable = false, length = 200)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "asset_type", nullable = false, length = 20)
+    private AssetType assetType;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    protected void touch() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public String getSymbolAndSeries() {
+        return symbol + "/" + series;
+    }
 }
