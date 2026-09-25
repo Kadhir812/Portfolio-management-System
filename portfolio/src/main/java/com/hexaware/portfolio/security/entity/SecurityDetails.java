@@ -10,14 +10,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Table(name = "stoks_master")
-@Getter
-@Setter
+@Table(name = "stocks_master")
+@Data 
 @NoArgsConstructor
 public class SecurityDetails {
 

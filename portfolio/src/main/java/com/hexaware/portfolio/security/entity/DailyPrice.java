@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "stoks_daily_prices", uniqueConstraints = {
+@Table(name = "stocks_daily_prices", uniqueConstraints = {
     @UniqueConstraint(name = "uk_daily_price_isin_date", columnNames = { "isin", "trade_date" })
 })
 public class DailyPrice {
