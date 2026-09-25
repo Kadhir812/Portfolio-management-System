@@ -2,5 +2,11 @@ package com.hexaware.portfolio.security.entity;
 
 public enum AssetType {
     EQUITY,
-    MUTUAL
+    MUTUAL,
+    COMMODITY,
+    BOND,
+    CRYPTO,
+    REIT,
+    ETF,
+    CASH
 }
