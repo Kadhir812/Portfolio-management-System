@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -40,7 +41,10 @@ public class PortfolioHolding {
 
     private BigDecimal shares;
     private BigDecimal price;
+
+    @Column(name = "holding_value")
     private BigDecimal value;
+
     private LocalDate priceDate;
     private Instant createdAt;
     private Instant updatedAt;

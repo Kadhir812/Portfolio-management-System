@@ -1,6 +1,6 @@
 package com.hexaware.portfolio.batch.processor;
 
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.item.ItemProcessor;
 
 import com.hexaware.portfolio.batch.model.HistoricalPriceRow;
 import com.hexaware.portfolio.security.entity.DailyPrice;

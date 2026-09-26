@@ -1,6 +1,7 @@
 package com.hexaware.portfolio.portfolio_backend.entity;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.hexaware.portfolio.portfolio_backend.entity.enums.BenchMark;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
@@ -12,9 +13,8 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,8 +30,14 @@ import lombok.NoArgsConstructor;
 public class Portfolio {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private String id;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null || this.id.isBlank()) {
+            this.id = UUID.randomUUID().toString();
+        }
+    }
 
     private String name;
 

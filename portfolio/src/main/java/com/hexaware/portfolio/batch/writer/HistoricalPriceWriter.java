@@ -3,8 +3,8 @@ package com.hexaware.portfolio.batch.writer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.batch.infrastructure.item.Chunk;
-import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
 import com.hexaware.portfolio.security.entity.DailyPrice;

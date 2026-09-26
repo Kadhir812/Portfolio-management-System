@@ -21,8 +21,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hexaware.portfolio.security.entity.DailyPrice;
 import com.hexaware.portfolio.security.entity.SecurityDetails;
 import com.hexaware.portfolio.security.repository.DailyPriceRepository;
@@ -209,8 +209,8 @@ public class DailyPriceScheduler {
     private static String text(JsonNode item, String... names) {
         for (String name : names) {
             JsonNode value = item.get(name);
-            if (value != null && !value.isNull() && !value.asString().isBlank()) {
-                return value.asString();
+            if (value != null && !value.isNull() && !value.asText().isBlank()) {
+                return value.asText();
             }
         }
         return null;
