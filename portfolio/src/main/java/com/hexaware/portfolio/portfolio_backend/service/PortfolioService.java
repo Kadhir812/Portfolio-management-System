@@ -11,14 +11,13 @@ import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioNotFoundExce
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioRepository;
 
+import lombok.AllArgsConstructor;
+
 @Service
+@AllArgsConstructor
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
-
-    public PortfolioService(PortfolioRepository portfolioRepository) {
-        this.portfolioRepository = portfolioRepository;
-    }
 
     public Portfolio create(CreatePortfolioRequest request) {
         validate(request);

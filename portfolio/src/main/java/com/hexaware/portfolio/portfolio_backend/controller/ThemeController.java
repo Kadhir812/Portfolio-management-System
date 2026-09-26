@@ -16,15 +16,14 @@ import com.hexaware.portfolio.portfolio_backend.dto.ThemeDefinitionResponse;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.service.ThemeService;
 
+import lombok.AllArgsConstructor;
+
 @RestController
 @RequestMapping("/api")
+@AllArgsConstructor
 public class ThemeController {
 
     private final ThemeService themeService;
-
-    public ThemeController(ThemeService themeService) {
-        this.themeService = themeService;
-    }
 
     @GetMapping("/themes")
     public ResponseEntity<List<ThemeDefinitionResponse>> getThemes() {

@@ -19,5 +19,6 @@ public interface DailyPriceRepository extends JpaRepository<DailyPrice, Long> {
 
     Optional<DailyPrice> findTopByIsinOrderByTradeDateDesc(String isin);
 
+    
     boolean existsByIsin(String isin);
 }

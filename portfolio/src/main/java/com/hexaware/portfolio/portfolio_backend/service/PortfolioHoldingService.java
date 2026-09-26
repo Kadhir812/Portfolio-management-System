@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import com.hexaware.portfolio.portfolio_backend.dto.AddSecurityRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.EligibleSecurityResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.PortfolioHoldingSummaryResponse;
 import com.hexaware.portfolio.portfolio_backend.dto.ThemeDefinitionResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.UpdateHoldingRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
@@ -29,7 +31,10 @@ import com.hexaware.portfolio.security.entity.SecurityDetails;
 import com.hexaware.portfolio.security.repository.DailyPriceRepository;
 import com.hexaware.portfolio.security.repository.SecurityDetailsRepository;
 
+import lombok.AllArgsConstructor;
+
 @Service
+@AllArgsConstructor
 public class PortfolioHoldingService {
 
     private final PortfolioHoldingRepository holdingRepository;
@@ -38,18 +43,6 @@ public class PortfolioHoldingService {
     private final SecurityDetailsRepository securityRepository;
     private final DailyPriceRepository dailyPriceRepository;
 
-    public PortfolioHoldingService(
-            PortfolioHoldingRepository holdingRepository,
-            PortfolioRepository portfolioRepository,
-            ThemeRepository themeRepository,
-            SecurityDetailsRepository securityRepository,
-            DailyPriceRepository dailyPriceRepository) {
-        this.holdingRepository = holdingRepository;
-        this.portfolioRepository = portfolioRepository;
-        this.themeRepository = themeRepository;
-        this.securityRepository = securityRepository;
-        this.dailyPriceRepository = dailyPriceRepository;
-    }
 
     public PortfolioHolding addSecurity(String portfolioId, AddSecurityRequest request) {
         validateRequest(request);
@@ -168,6 +161,15 @@ public class PortfolioHoldingService {
         return holdingRepository.findByPortfolioId(portfolioId);
     }
 
+    public PortfolioHoldingSummaryResponse getSummary(String portfolioId) {
+        findPortfolio(portfolioId);
+        List<PortfolioHolding> holdings = holdingRepository.findByPortfolioId(portfolioId);
+        BigDecimal totalValue = holdings.stream()
+                .map(PortfolioHolding::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new PortfolioHoldingSummaryResponse(holdings.size(), totalValue);
+    }
+
     public List<EligibleSecurityResponse> getEligibleSecurities(String portfolioId) {
         Portfolio portfolio = findPortfolio(portfolioId);
         if (portfolio.getTheme() == null) {
@@ -200,6 +202,55 @@ public class PortfolioHoldingService {
                 .orElseThrow(() -> new HoldingGuardrailException("Holding not found: " + holdingId));
     }
 
+        public PortfolioHolding update(String portfolioId, Long holdingId, UpdateHoldingRequest request) {
+            BigDecimal shares = requireShares(request == null ? null : request.shares());
+
+        Portfolio portfolio = findPortfolio(portfolioId);
+        if (portfolio.isHoldingsSaved()) {
+            throw new HoldingGuardrailException("Portfolio holdings have already been saved");
+        }
+        if (portfolio.getTheme() == null) {
+            throw new ThemeNotAttachedException(portfolioId);
+        }
+
+        PortfolioHolding holding = getById(portfolioId, holdingId);
+        SecurityDetails security = securityRepository.findByIsin(holding.getIsin())
+            .orElseThrow(() -> new SecurityNotFoundException(holding.getIsin()));
+        DailyPrice dailyPrice = dailyPriceRepository.findTopByIsinOrderByTradeDateDesc(security.getIsin())
+            .orElseThrow(() -> new HoldingGuardrailException(
+                "No price is available for security: " + security.getIsin()));
+
+        BigDecimal price = priceFrom(dailyPrice);
+        BigDecimal value = shares.multiply(price);
+        ThemeDefinitionResponse theme = themeRepository.findByTheme(portfolio.getTheme());
+        double allocationLimit = theme.allocations().stream()
+            .filter(allocation -> allocation.assetClass() == holding.getAssetClass())
+            .mapToDouble(allocation -> allocation.percentage())
+            .findFirst()
+            .orElse(0);
+
+        BigDecimal otherHoldingsValue = holdingRepository.findByPortfolioId(portfolioId).stream()
+            .filter(existing -> !existing.getId().equals(holdingId))
+            .filter(existing -> existing.getAssetClass() == holding.getAssetClass())
+            .map(PortfolioHolding::getValue)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal maximumValue = BigDecimal.valueOf(portfolio.getAmount())
+            .multiply(BigDecimal.valueOf(allocationLimit))
+            .divide(BigDecimal.valueOf(100));
+        if (otherHoldingsValue.add(value).compareTo(maximumValue) > 0) {
+            throw new HoldingGuardrailException(
+                "Updating this security exceeds the " + allocationLimit + "% " + holding.getAssetClass()
+                    + " limit for the " + portfolio.getTheme() + " theme");
+        }
+
+        holding.setShares(shares);
+        holding.setPrice(price);
+        holding.setValue(value);
+        holding.setPriceDate(dailyPrice.getTradeDate());
+        holding.setUpdatedAt(Instant.now());
+        return holdingRepository.save(holding);
+        }
+
     public void delete(String portfolioId, Long holdingId) {
         holdingRepository.delete(getById(portfolioId, holdingId));
         Portfolio portfolio = findPortfolio(portfolioId);
@@ -220,9 +271,14 @@ public class PortfolioHoldingService {
         if (request == null || request.isin() == null || request.isin().isBlank()) {
             throw new PortfolioValidationException("Security ISIN is required");
         }
-        if (request.shares() == null || request.shares().compareTo(BigDecimal.ZERO) <= 0) {
+        requireShares(request.shares());
+    }
+
+    private BigDecimal requireShares(BigDecimal shares) {
+        if (shares == null || shares.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PortfolioValidationException("Shares must be greater than zero");
         }
+        return shares;
     }
 
     private BigDecimal priceFrom(DailyPrice dailyPrice) {

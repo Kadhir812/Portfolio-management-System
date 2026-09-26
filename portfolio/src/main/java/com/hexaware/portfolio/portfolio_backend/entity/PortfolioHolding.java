@@ -4,8 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
+
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
 
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,19 +21,21 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Table(name = "portfolio_holdings")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PortfolioHolding {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String portfolioId;
+    @Column(name = "portfolio_id", nullable = false)
+    private Long portfolioId;
+
     private String isin;
     private String securityName;
     private String symbol;

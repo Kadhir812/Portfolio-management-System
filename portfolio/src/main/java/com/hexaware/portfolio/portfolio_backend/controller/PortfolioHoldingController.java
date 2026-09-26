@@ -8,12 +8,15 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hexaware.portfolio.portfolio_backend.dto.AddSecurityRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.EligibleSecurityResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.PortfolioHoldingSummaryResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.UpdateHoldingRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
 import com.hexaware.portfolio.portfolio_backend.service.PortfolioHoldingService;
@@ -47,6 +50,11 @@ public class PortfolioHoldingController {
         return ResponseEntity.ok(holdingService.getAll(portfolioId));
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<PortfolioHoldingSummaryResponse> getSummary(@PathVariable String portfolioId) {
+        return ResponseEntity.ok(holdingService.getSummary(portfolioId));
+    }
+
     @GetMapping("/eligible-securities")
     public ResponseEntity<List<EligibleSecurityResponse>> getEligibleSecurities(
             @PathVariable String portfolioId) {
@@ -58,6 +66,14 @@ public class PortfolioHoldingController {
             @PathVariable String portfolioId,
             @PathVariable Long holdingId) {
         return ResponseEntity.ok(holdingService.getById(portfolioId, holdingId));
+    }
+
+    @PutMapping("/{holdingId}")
+    public ResponseEntity<PortfolioHolding> update(
+            @PathVariable String portfolioId,
+            @PathVariable Long holdingId,
+            @RequestBody UpdateHoldingRequest request) {
+        return ResponseEntity.ok(holdingService.update(portfolioId, holdingId, request));
     }
 
     @DeleteMapping("/{holdingId}")

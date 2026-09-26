@@ -17,19 +17,19 @@ import com.hexaware.portfolio.portfolio_backend.dto.CreatePortfolioRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.service.PortfolioService;
 
+import lombok.AllArgsConstructor;
+
 @RestController
 @RequestMapping("/api/portfolios")
+@AllArgsConstructor
 public class PortfolioController {
 
     private final PortfolioService portfolioService;
 
-    public PortfolioController(PortfolioService portfolioService) {
-        this.portfolioService = portfolioService;
-    }
-
     @PostMapping
     public ResponseEntity<Portfolio> create(@RequestBody CreatePortfolioRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(portfolioService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(portfolioService.create(request));
     }
 
     @GetMapping

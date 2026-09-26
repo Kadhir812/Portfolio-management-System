@@ -60,30 +60,62 @@ public class DailyPriceScheduler {
         this.apiUrl = apiUrl.trim();
         this.zoneId = ZoneId.of(zone);
     }
-
+     
+    
     @Scheduled(cron = "${daily-price.cron:0 15 15 * * MON-FRI}", zone = "${daily-price.zone:Asia/Kolkata}")
     public void fetchDailyPrices() {
+        LOGGER.info("========== DAILY PRICE SCHEDULER TRIGGERED ==========");
         if (apiUrl.isBlank()) {
-            LOGGER.debug("Daily price scheduler is disabled because daily-price.api-url is blank");
+            LOGGER.warn("Daily price scheduler is disabled because daily-price.api-url is blank");
             return;
         }
 
-        for (SecurityDetails security : securityDetailsRepository.findAll()) {
+        List<SecurityDetails> securities = securityDetailsRepository.findAll();
+        LOGGER.info("Daily price scheduler started; processing {} securities", securities.size());
+        for (SecurityDetails security : securities) {
             try {
                 importSecurity(security);
+                LOGGER.info("Daily price import completed for {}", security.getSymbolAndSeries());
             } catch (Exception exception) {
-                LOGGER.error("Daily price import failed for {}", security.getSymbolAndSeries(), exception);
+                LOGGER.error(
+                    "Daily price import failed for {}",
+                    security.getSymbolAndSeries(),
+                    exception
+                );
             }
         }
+        LOGGER.info("Daily price scheduler finished");
     }
 
     private void importSecurity(SecurityDetails security) throws Exception {
-        String url = apiUrl
-                .replace("{isin}", security.getIsin())
-                .replace("{symbol}", security.getSymbol())
-            .replace("{series}", security.getSeries())
-            .replace("{from}", requestDate())
-            .replace("{to}", requestDate());
+        DailyPrice latestPrice = dailyPriceRepository
+        .findTopByIsinOrderByTradeDateDesc(security.getIsin())
+        .orElse(null);
+
+LocalDate fromDate;
+
+if (latestPrice == null) {
+    fromDate = LocalDate.now(zoneId).minusDays(1);
+} else {
+    fromDate = latestPrice.getTradeDate().plusDays(1);
+}
+
+LocalDate toDate = LocalDate.now(zoneId).minusDays(1);
+
+if (fromDate.isAfter(toDate)) {
+    LOGGER.info(
+        "No missing daily prices for {}",
+        security.getSymbolAndSeries()
+    );
+    return;
+}
+
+String url = apiUrl
+        .replace("{isin}", security.getIsin())
+        .replace("{symbol}", security.getSymbol())
+        .replace("{series}", security.getSeries())
+        .replace("{from}", formatDate(fromDate))
+        .replace("{to}", formatDate(toDate));
         String payload = restClient.get()
                 .uri(url)
             .header("User-Agent", "Mozilla/5.0")
@@ -104,8 +136,8 @@ public class DailyPriceScheduler {
         }
     }
 
-    private String requestDate() {
-        return LocalDate.now(zoneId).format(DateTimeFormatter.ofPattern("dd-MM-uuuu"));
+    private static String formatDate(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("dd-MM-uuuu"));
     }
 
     private List<DailyPrice> jsonRows(String payload, SecurityDetails security) throws Exception {
