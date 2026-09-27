@@ -2,12 +2,14 @@ package com.hexaware.portfolio.portfolio_backend.entity;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.BenchMark;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioType;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
+import com.hexaware.portfolio.portfolio_backend.security.AppUser;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,6 +18,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +37,11 @@ public class Portfolio {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
+    @JsonIgnore
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser owner;
 
     private String name;
 

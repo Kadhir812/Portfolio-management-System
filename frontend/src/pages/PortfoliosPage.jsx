@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, ArrowUpRight } from 'lucide-react';
+import { Plus, Trash2, ArrowUpRight, Pencil } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
 
-const formatMoney = (value) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(value || 0);
+const formatLabel = (value) => value
+  ? value.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+  : 'Not set';
 
 export function PortfoliosPage() {
   const [portfolios, setPortfolios] = useState([]);
@@ -33,12 +30,6 @@ export function PortfoliosPage() {
 
     load();
   }, []);
-
-  const statusMeta = useMemo(() => ({
-    active: { tone: 'success', label: 'Active' },
-    new: { tone: 'info', label: 'New' },
-    closed: { tone: 'warning', label: 'Closed' }
-  }), []);
 
   const removePortfolio = async (portfolioId) => {
     const confirmed = window.confirm('Delete this portfolio?');
@@ -85,15 +76,25 @@ export function PortfoliosPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        portfolios.length === 0 ? (
+          <Card className="border-dashed p-10 text-center">
+            <h3 className="text-xl font-semibold">No portfolios yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Create your first portfolio to start tracking allocations and holdings.</p>
+            <Link to="/portfolios/new" className="mt-5 inline-flex">
+              <Button className="gap-2"><Plus className="h-4 w-4" />Create portfolio</Button>
+            </Link>
+          </Card>
+        ) : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {portfolios.map((portfolio) => {
-            const meta = statusMeta[portfolio.status] || statusMeta.active;
+            const status = portfolio.holdingsSaved
+              ? { tone: 'success', label: 'Saved' }
+              : { tone: 'info', label: 'In progress' };
 
             return (
               <Card key={portfolio.id} className="overflow-hidden p-0">
                 <div className="relative h-28 border-b border-border bg-gradient-to-br from-muted via-background to-muted p-4">
                   <div className="absolute right-4 top-4">
-                    <Badge variant={meta.tone}>{meta.label}</Badge>
+                    <Badge variant={status.tone}>{status.label}</Badge>
                   </div>
                   <div className="absolute inset-x-4 bottom-4 flex items-end gap-2">
                     {[30, 45, 60, 75, 93].map((height, index) => (
@@ -106,15 +107,15 @@ export function PortfoliosPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-semibold">{portfolio.name}</h3>
-                      <p className="text-sm text-muted-foreground">{portfolio.theme || 'Theme not set'}</p>
+                      <p className="text-sm text-muted-foreground">{formatLabel(portfolio.theme)}</p>
                     </div>
-                    <Badge variant="outline">{portfolio.rebalanceFrequency || 'Monthly'}</Badge>
+                    <Badge variant="outline">{formatLabel(portfolio.rebalanceFrequency)}</Badge>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
                     <div className="rounded-2xl border border-border bg-muted/50 p-3">
                       <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Investment</p>
-                      <p className="mt-2 font-semibold text-foreground">{formatMoney(portfolio.amount)}</p>
+                        <p className="mt-2 font-semibold text-foreground">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: portfolio.currency || 'INR', maximumFractionDigits: 0 }).format(portfolio.amount || 0)}</p>
                     </div>
                     <div className="rounded-2xl border border-border bg-muted/50 p-3">
                       <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Benchmark</p>
@@ -122,24 +123,33 @@ export function PortfoliosPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 pt-1">
+                  <div className="pt-1">
                     <Link to={`/portfolios/${portfolio.id}`} className="flex-1">
                       <Button variant="secondary" className="w-full gap-2">
                         Open dashboard
                         <ArrowUpRight className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Link to={`/portfolios/${portfolio.id}/holdings`}>
-                      <Button variant="outline">Holdings</Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      className="px-3 text-red-600 hover:bg-red-500/10 hover:text-red-600"
-                      onClick={() => removePortfolio(portfolio.id)}
-                      aria-label={`Delete ${portfolio.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <Link to={`/portfolios/${portfolio.id}/holdings`}>
+                        <Button variant="outline" className="w-full">Holdings</Button>
+                      </Link>
+                      <Link to={`/portfolios/${portfolio.id}/edit`}>
+                        <Button variant="outline" className="w-full gap-2" aria-label={`Edit ${portfolio.name}`}>
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 text-red-600 hover:bg-red-500/10 hover:text-red-600"
+                        onClick={() => removePortfolio(portfolio.id)}
+                        aria-label={`Delete ${portfolio.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

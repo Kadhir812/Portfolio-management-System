@@ -54,4 +54,5 @@ public class PortfolioController {
         portfolioService.delete(portfolioId);
         return ResponseEntity.noContent().build();
     }
+
 }

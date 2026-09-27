@@ -13,16 +13,22 @@ import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationEx
 import com.hexaware.portfolio.portfolio_backend.exceptions.ThemeNotAttachedException;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.ThemeRepository;
+import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
 
 @Service
 public class ThemeService {
 
     private final PortfolioRepository portfolioRepository;
     private final ThemeRepository themeRepository;
+    private final CurrentUserService currentUserService;
 
-    public ThemeService(PortfolioRepository portfolioRepository, ThemeRepository themeRepository) {
+    public ThemeService(
+            PortfolioRepository portfolioRepository,
+            ThemeRepository themeRepository,
+            CurrentUserService currentUserService) {
         this.portfolioRepository = portfolioRepository;
         this.themeRepository = themeRepository;
+        this.currentUserService = currentUserService;
     }
 
     public List<ThemeDefinitionResponse> getAllThemes() {
@@ -61,7 +67,9 @@ public class ThemeService {
         if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
-        return portfolioRepository.findById(portfolioId)
+        return portfolioRepository.findByIdAndOwnerUsername(
+                portfolioId,
+                currentUserService.getCurrentUser().getUsername())
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 }

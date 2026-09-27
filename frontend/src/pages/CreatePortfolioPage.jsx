@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { api } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
@@ -7,18 +7,23 @@ import { Badge } from '../components/Badge';
 
 const steps = ['Portfolio Setup', 'Theme Selection', 'Asset Allocation'];
 
-const typeOptions = ['PERCENTAGE', 'RUPEE'];
+const typeOptions = [
+  { value: 'WEIGHTAGE', label: 'Percentage' },
+  { value: 'AMOUNT', label: 'Rupee amount' }
+];
 const currencyOptions = ['INR', 'USD', 'GBP'];
 const exchangeOptions = ['NSE', 'BSE'];
-const rebalanceOptions = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY'];
+const rebalanceOptions = ['DAILY', 'WEEKLY', 'MONTHLY'];
 const benchmarkOptions = ['NIFTY50', 'NASDAQ', 'SMP500'];
 
 export function CreatePortfolioPage() {
   const navigate = useNavigate();
+  const { id: editingPortfolioId } = useParams();
+  const isEditing = Boolean(editingPortfolioId);
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState({
     name: '',
-    type: 'RUPEE',
+    type: 'AMOUNT',
     currency: 'INR',
     benchmark: 'NIFTY50',
     exchange: 'NSE',
@@ -46,6 +51,26 @@ export function CreatePortfolioPage() {
     loadThemes();
   }, []);
 
+  useEffect(() => {
+    if (!editingPortfolioId) return;
+
+    api.portfolios.get(editingPortfolioId)
+      .then((portfolio) => {
+        setForm({
+          name: portfolio.name || '',
+          type: portfolio.type || 'AMOUNT',
+          currency: portfolio.currency || 'INR',
+          benchmark: portfolio.benchmark || 'NIFTY50',
+          exchange: portfolio.exchange || 'NSE',
+          rebalanceFrequency: portfolio.rebalanceFrequency || 'MONTHLY',
+          amount: portfolio.amount || 0
+        });
+        setCreatedPortfolioId(portfolio.id);
+        setSelectedTheme(portfolio.theme || null);
+      })
+      .catch((e) => setError(e.message || 'Unable to load portfolio'));
+  }, [editingPortfolioId]);
+
   const selectedThemeData = useMemo(
     () => themes.find((item) => item.theme === selectedTheme) || null,
     [selectedTheme, themes]
@@ -57,10 +82,18 @@ export function CreatePortfolioPage() {
     try {
       setSaving(true);
       setError('');
-      const created = await api.portfolios.create({
+      const payload = {
         ...form,
         amount: Number(form.amount)
-      });
+      };
+
+      if (isEditing) {
+        await api.portfolios.update(editingPortfolioId, payload);
+        navigate(`/portfolios/${editingPortfolioId}`);
+        return;
+      }
+
+      const created = await api.portfolios.create(payload);
       setCreatedPortfolioId(created.id);
       setSelectedTheme(null);
       setCurrentStep(1);
@@ -113,8 +146,8 @@ export function CreatePortfolioPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Create portfolio"
-        description="Define the portfolio, choose the best-matching theme, and finalize allocation."
+        title={isEditing ? 'Edit portfolio' : 'Create portfolio'}
+        description={isEditing ? 'Update the portfolio settings and preserve its selected theme.' : 'Define the portfolio, choose the best-matching theme, and finalize allocation.'}
         rightAction={
           <Link to="/portfolios" className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
             <ArrowLeft className="h-4 w-4" />
@@ -156,7 +189,7 @@ export function CreatePortfolioPage() {
                     className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
                   >
                     {typeOptions.map((option) => (
-                      <option key={option} value={option}>{option}</option>
+                      <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </select>
                 </label>
@@ -248,7 +281,7 @@ export function CreatePortfolioPage() {
               disabled={saving || !form.name.trim()}
               className="inline-flex items-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save portfolio
+              {saving ? (isEditing ? 'Updating portfolio...' : 'Saving portfolio...') : (isEditing ? 'Update portfolio' : 'Save portfolio')}
               <Check className="h-4 w-4" />
             </button>
           </div>
@@ -264,6 +297,7 @@ export function CreatePortfolioPage() {
                 key={theme.theme}
                 type="button"
                 onClick={() => setSelectedTheme(theme.theme)}
+                aria-pressed={selectedTheme === theme.theme}
                 className={`rounded-[28px] border p-5 text-left transition ${
                   selectedTheme === theme.theme
                     ? 'border-brand-500 bg-brand-500/10 shadow-soft'
@@ -278,6 +312,10 @@ export function CreatePortfolioPage() {
                   <Badge tone="info">{theme.risk}</Badge>
                 </div>
 
+                <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
+                  {selectedTheme === theme.theme ? 'Selected theme' : 'Select theme'}
+                </div>
+
                 <div className="mt-4 space-y-2">
                   {theme.allocations.map((allocation) => (
                     <div key={allocation.assetClass} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
@@ -290,13 +328,30 @@ export function CreatePortfolioPage() {
             ))}
           </div>
 
+          {!loadingThemes && themes.length === 0 ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              No investment themes are available. Check the backend connection and try again.
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4">
+            <p className="text-sm text-slate-300">
+              {selectedThemeData ? `Ready to continue with ${selectedThemeData.label}.` : 'Choose a theme to continue.'}
+            </p>
+            <button
+              type="button"
+              onClick={handleThemeNext}
+              disabled={saving || !selectedTheme}
+              className="inline-flex items-center gap-2 rounded-2xl bg-sky-300 px-5 py-3 font-medium text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? 'Saving theme...' : 'Continue with this theme'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
           <div className="flex justify-between">
             <button type="button" onClick={() => setCurrentStep(0)} className="rounded-2xl border border-slate-700 px-4 py-2 text-slate-200">
               Previous
-            </button>
-            <button type="button" onClick={handleThemeNext} disabled={saving || !selectedTheme} className="inline-flex items-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">
-              Next step
-              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -331,8 +386,12 @@ export function CreatePortfolioPage() {
                 <button type="button" onClick={() => setCurrentStep(1)} className="rounded-2xl border border-slate-700 px-4 py-2 text-slate-200">
                   Previous
                 </button>
-                <button type="button" onClick={() => navigate('/portfolios')} className="rounded-2xl bg-emerald-500 px-5 py-3 font-medium text-slate-950">
-                  Finish setup
+                <button
+                  type="button"
+                  onClick={() => navigate(`/portfolios/${createdPortfolioId}/holdings`)}
+                  className="rounded-2xl bg-emerald-500 px-5 py-3 font-medium text-slate-950"
+                >
+                  Add holdings
                 </button>
               </div>
             </div>

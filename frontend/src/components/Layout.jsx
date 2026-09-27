@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import { BriefcaseBusiness, LayoutDashboard, BellRing } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { BriefcaseBusiness, LayoutDashboard, BellRing, LogOut } from 'lucide-react';
 import { Card } from './ui/card';
 
 const navItems = [
@@ -9,6 +9,19 @@ const navItems = [
 ];
 
 export function Layout({ children }) {
+  const location = useLocation();
+  const portfolioMatch = location.pathname.match(/^\/portfolios\/([^/]+)/);
+  const dashboardPath = portfolioMatch ? `/portfolios/${portfolioMatch[1]}` : '/portfolios/overview';
+  const currentNavItems = navItems.map((item) =>
+    item.label === 'Dashboard' ? { ...item, to: dashboardPath } : item
+  );
+
+  const logout = () => {
+    localStorage.removeItem('portfolio_token');
+    localStorage.removeItem('portfolio_user');
+    window.location.href = '/login';
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
@@ -26,10 +39,11 @@ export function Layout({ children }) {
           </div>
 
           <nav className="space-y-2">
-            {navItems.map(({ label, to, icon: Icon }) => (
+            {currentNavItems.map(({ label, to, icon: Icon }) => (
               <NavLink
                 key={label}
                 to={to}
+                end={label === 'Portfolios'}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
                     isActive
@@ -54,6 +68,15 @@ export function Layout({ children }) {
               <div className="h-12 w-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-500" />
             </div>
           </Card>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-5 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </aside>
 
         <main className="flex-1 overflow-x-hidden bg-background p-6">

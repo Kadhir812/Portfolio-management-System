@@ -8,15 +8,42 @@ const client = axios.create({
 	timeout: 10000
 });
 
+client.interceptors.request.use((config) => {
+	const token = localStorage.getItem('portfolio_token');
+	if (token) {
+		config.headers.Authorization = `Bearer ${token}`;
+	}
+	return config;
+});
+
 client.interceptors.response.use(
 	(response) => response,
 	(error) => {
-		const message = error.response?.data?.message || error.response?.data || error.message;
+		if (error.response?.status === 401) {
+			localStorage.removeItem('portfolio_token');
+			localStorage.removeItem('portfolio_user');
+			if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+				window.location.assign('/login');
+			}
+		}
+		const message = error.response?.data?.message
+			|| error.response?.data?.error
+			|| error.response?.data
+			|| error.message;
+		console.error('API request failed', {
+			status: error.response?.status,
+			url: error.config?.url,
+			response: error.response?.data
+		});
 		return Promise.reject(new Error(typeof message === 'string' ? message : 'Request failed'));
 	}
 );
 
 export const api = {
+	auth: {
+		register: async (payload) => (await client.post('/auth/register', payload)).data,
+		login: async (payload) => (await client.post('/auth/login', payload)).data
+	},
 	portfolios: {
 		list: async () => (await client.get('/portfolios')).data,
 		get: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}`)).data,

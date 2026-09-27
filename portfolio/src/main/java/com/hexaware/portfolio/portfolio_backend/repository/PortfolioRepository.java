@@ -1,5 +1,6 @@
 package com.hexaware.portfolio.portfolio_backend.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,5 +9,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 
 public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
 
-	Optional<Portfolio> findById(Long id);
+	List<Portfolio> findAllByOwnerUsername(String username);
+
+	Optional<Portfolio> findByIdAndOwnerUsername(Long id, String username);
 }

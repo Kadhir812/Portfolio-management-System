@@ -10,6 +10,8 @@ import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioNotFoundException;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioRepository;
+import com.hexaware.portfolio.portfolio_backend.security.AppUser;
+import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
 
 import lombok.AllArgsConstructor;
 
@@ -18,12 +20,15 @@ import lombok.AllArgsConstructor;
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
+    private final CurrentUserService currentUserService;
 
     public Portfolio create(CreatePortfolioRequest request) {
         validate(request);
 
         Instant now = Instant.now();
+        AppUser owner = currentUserService.getCurrentUser();
         Portfolio portfolio = Portfolio.builder()
+            .owner(owner)
                 .name(request.name().trim())
                 .type(request.type())
                 .currency(request.currency())
@@ -40,7 +45,7 @@ public class PortfolioService {
     }
 
     public List<Portfolio> getAll() {
-        return portfolioRepository.findAll();
+        return portfolioRepository.findAllByOwnerUsername(currentUserService.getCurrentUser().getUsername());
     }
 
     public Portfolio getById(Long portfolioId) {
@@ -71,7 +76,9 @@ public class PortfolioService {
         if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
-        return portfolioRepository.findById(portfolioId)
+        return portfolioRepository.findByIdAndOwnerUsername(
+                portfolioId,
+                currentUserService.getCurrentUser().getUsername())
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 

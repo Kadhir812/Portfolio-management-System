@@ -25,6 +25,7 @@ import com.hexaware.portfolio.portfolio_backend.exceptions.ThemeNotAttachedExcep
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioHoldingRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.ThemeRepository;
+import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
 import com.hexaware.portfolio.security.entity.AssetType;
 import com.hexaware.portfolio.security.entity.DailyPrice;
 import com.hexaware.portfolio.security.entity.SecurityDetails;
@@ -42,6 +43,7 @@ public class PortfolioHoldingService {
     private final ThemeRepository themeRepository;
     private final SecurityDetailsRepository securityRepository;
     private final DailyPriceRepository dailyPriceRepository;
+    private final CurrentUserService currentUserService;
 
 
     public PortfolioHolding addSecurity(Long portfolioId, AddSecurityRequest request) {
@@ -135,20 +137,22 @@ public class PortfolioHoldingService {
                     .multiply(BigDecimal.valueOf(allocation.percentage()))
                     .divide(BigDecimal.valueOf(100));
             BigDecimal actualValue = valueByAssetClass.getOrDefault(allocation.assetClass(), BigDecimal.ZERO);
-            if (actualValue.subtract(expectedValue).abs().compareTo(tolerance) > 0) {
+            if (allocation.assetClass() != AssetClass.CASH
+                && actualValue.compareTo(expectedValue.add(tolerance)) > 0) {
                 throw new HoldingGuardrailException(
-                        allocation.assetClass() + " allocation must equal " + allocation.percentage()
-                                + "%. Expected value: " + expectedValue + ", actual value: " + actualValue);
+                allocation.assetClass() + " allocation cannot exceed " + allocation.percentage()
+                    + "%. Maximum value: " + expectedValue + ", actual value: " + actualValue);
             }
         }
 
         BigDecimal totalValue = holdings.stream()
                 .map(PortfolioHolding::getValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (totalValue.subtract(portfolioAmount).abs().compareTo(tolerance) > 0) {
+        BigDecimal residualCash = portfolioAmount.subtract(totalValue);
+        if (residualCash.compareTo(tolerance.negate()) < 0) {
             throw new HoldingGuardrailException(
-                    "Total holdings must equal the portfolio amount. Expected: "
-                            + portfolioAmount + ", actual: " + totalValue);
+                "Total holdings cannot exceed the portfolio amount. Maximum: "
+                    + portfolioAmount + ", actual: " + totalValue);
         }
 
         portfolio.setHoldingsSaved(true);
@@ -263,7 +267,9 @@ public class PortfolioHoldingService {
         if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
-        return portfolioRepository.findById(portfolioId)
+        return portfolioRepository.findByIdAndOwnerUsername(
+                portfolioId,
+                currentUserService.getCurrentUser().getUsername())
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
     }
 
