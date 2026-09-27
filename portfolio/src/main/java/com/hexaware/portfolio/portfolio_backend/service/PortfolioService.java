@@ -27,7 +27,7 @@ public class PortfolioService {
                 .name(request.name().trim())
                 .type(request.type())
                 .currency(request.currency())
-                .benchmerk(request.benchmark())
+                .benchmark(request.benchmark())
                 .exchange(request.exchange())
                 .rebalanceFrequency(request.rebalanceFrequency())
                 .amount(request.amount())
@@ -43,18 +43,18 @@ public class PortfolioService {
         return portfolioRepository.findAll();
     }
 
-    public Portfolio getById(String portfolioId) {
+    public Portfolio getById(Long portfolioId) {
         return findPortfolio(portfolioId);
     }
 
-    public Portfolio update(String portfolioId, CreatePortfolioRequest request) {
+    public Portfolio update(Long portfolioId, CreatePortfolioRequest request) {
         validate(request);
 
         Portfolio portfolio = findPortfolio(portfolioId);
         portfolio.setName(request.name().trim());
         portfolio.setType(request.type());
         portfolio.setCurrency(request.currency());
-        portfolio.setBenchmerk(request.benchmark());
+        portfolio.setBenchmark(request.benchmark());
         portfolio.setExchange(request.exchange());
         portfolio.setRebalanceFrequency(request.rebalanceFrequency());
         portfolio.setAmount(request.amount());
@@ -63,12 +63,12 @@ public class PortfolioService {
         return portfolioRepository.save(portfolio);
     }
 
-    public void delete(String portfolioId) {
+    public void delete(Long portfolioId) {
         portfolioRepository.delete(findPortfolio(portfolioId));
     }
 
-    private Portfolio findPortfolio(String portfolioId) {
-        if (portfolioId == null || portfolioId.isBlank()) {
+    private Portfolio findPortfolio(Long portfolioId) {
+        if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
         return portfolioRepository.findById(portfolioId)

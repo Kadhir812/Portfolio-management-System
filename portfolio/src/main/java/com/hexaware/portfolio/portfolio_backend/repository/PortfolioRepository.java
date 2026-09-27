@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 
-public interface PortfolioRepository extends JpaRepository<Portfolio, String> {
+public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
 
-	Optional<Portfolio> findById(String id);
+	Optional<Portfolio> findById(Long id);
 }

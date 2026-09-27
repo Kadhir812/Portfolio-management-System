@@ -176,7 +176,7 @@ String url = apiUrl
                         .lowPrice(decimal(value(record, headers, "lowprice")))
                         .lastPrice(decimal(value(record, headers, "lastprice")))
                         .closePrice(decimal(value(record, headers, "closeprice")))
-                        .volume(longValue(value(record, headers, "totaltradedquantity")))
+                        // .volume(longValue(value(record, headers, "totaltradedquantity")))
                         .build());
             }
             return rows;
@@ -220,7 +220,7 @@ String url = apiUrl
                 .lowPrice(decimal(item, "lowPrice", "low_price", "low"))
                 .lastPrice(decimal(item, "lastPrice", "last_price", "last"))
                 .closePrice(decimal(item, "closePrice", "close_price", "close"))
-                .volume(longValue(item, "volume", "totalTradedQuantity"))
+                // .volume(longValue(item, "volume", "totalTradedQuantity"))
                 .nav(decimal(item, "nav"))
                 .build();
     }
@@ -234,7 +234,7 @@ String url = apiUrl
         target.setLowPrice(source.getLowPrice());
         target.setLastPrice(source.getLastPrice());
         target.setClosePrice(source.getClosePrice());
-        target.setVolume(source.getVolume());
+        // target.setVolume(source.getVolume());
         target.setNav(source.getNav());
     }
 

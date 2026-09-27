@@ -32,7 +32,7 @@ public class ThemeController {
 
     @PutMapping("/portfolios/{portfolioId}/theme")
     public ResponseEntity<Portfolio> attachTheme(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @RequestBody AttachThemeRequest request) {
         return ResponseEntity.ok(themeService.attachTheme(
                 portfolioId,
@@ -40,12 +40,12 @@ public class ThemeController {
     }
 
     @GetMapping("/portfolios/{portfolioId}/theme")
-    public ResponseEntity<ThemeDefinitionResponse> getAttachedTheme(@PathVariable String portfolioId) {
+    public ResponseEntity<ThemeDefinitionResponse> getAttachedTheme(@PathVariable Long portfolioId) {
         return ResponseEntity.ok(themeService.getAttachedTheme(portfolioId));
     }
 
     @DeleteMapping("/portfolios/{portfolioId}/theme")
-    public ResponseEntity<Void> removeTheme(@PathVariable String portfolioId) {
+    public ResponseEntity<Void> removeTheme(@PathVariable Long portfolioId) {
         themeService.removeTheme(portfolioId);
         return ResponseEntity.noContent().build();
     }

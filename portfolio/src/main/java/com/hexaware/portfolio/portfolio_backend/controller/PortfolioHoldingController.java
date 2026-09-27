@@ -33,7 +33,7 @@ public class PortfolioHoldingController {
 
     @PostMapping
     public ResponseEntity<PortfolioHolding> addSecurity(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @RequestBody AddSecurityRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(holdingService.addSecurity(portfolioId, request));
@@ -41,36 +41,36 @@ public class PortfolioHoldingController {
 
     @PostMapping("/save")
     public ResponseEntity<Portfolio> saveHoldings(
-            @PathVariable String portfolioId) {
+            @PathVariable Long portfolioId) {
         return ResponseEntity.ok(holdingService.saveHoldings(portfolioId));
     }
 
     @GetMapping
-    public ResponseEntity<List<PortfolioHolding>> getAll(@PathVariable String portfolioId) {
+    public ResponseEntity<List<PortfolioHolding>> getAll(@PathVariable Long portfolioId) {
         return ResponseEntity.ok(holdingService.getAll(portfolioId));
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<PortfolioHoldingSummaryResponse> getSummary(@PathVariable String portfolioId) {
+    public ResponseEntity<PortfolioHoldingSummaryResponse> getSummary(@PathVariable Long portfolioId) {
         return ResponseEntity.ok(holdingService.getSummary(portfolioId));
     }
 
     @GetMapping("/eligible-securities")
     public ResponseEntity<List<EligibleSecurityResponse>> getEligibleSecurities(
-            @PathVariable String portfolioId) {
+            @PathVariable Long portfolioId) {
         return ResponseEntity.ok(holdingService.getEligibleSecurities(portfolioId));
     }
 
     @GetMapping("/{holdingId}")
     public ResponseEntity<PortfolioHolding> getById(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @PathVariable Long holdingId) {
         return ResponseEntity.ok(holdingService.getById(portfolioId, holdingId));
     }
 
     @PutMapping("/{holdingId}")
     public ResponseEntity<PortfolioHolding> update(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @PathVariable Long holdingId,
             @RequestBody UpdateHoldingRequest request) {
         return ResponseEntity.ok(holdingService.update(portfolioId, holdingId, request));
@@ -78,7 +78,7 @@ public class PortfolioHoldingController {
 
     @DeleteMapping("/{holdingId}")
     public ResponseEntity<Void> delete(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @PathVariable Long holdingId) {
         holdingService.delete(portfolioId, holdingId);
         return ResponseEntity.noContent().build();

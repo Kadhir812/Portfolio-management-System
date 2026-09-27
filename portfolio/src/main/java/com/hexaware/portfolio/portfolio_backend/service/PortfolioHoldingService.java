@@ -44,7 +44,7 @@ public class PortfolioHoldingService {
     private final DailyPriceRepository dailyPriceRepository;
 
 
-    public PortfolioHolding addSecurity(String portfolioId, AddSecurityRequest request) {
+    public PortfolioHolding addSecurity(Long portfolioId, AddSecurityRequest request) {
         validateRequest(request);
 
         Portfolio portfolio = findPortfolio(portfolioId);
@@ -106,7 +106,7 @@ public class PortfolioHoldingService {
         return holdingRepository.save(holding);
     }
 
-    public Portfolio saveHoldings(String portfolioId) {
+    public Portfolio saveHoldings(Long portfolioId) {
         Portfolio portfolio = findPortfolio(portfolioId);
         if (portfolio.getTheme() == null) {
             throw new ThemeNotAttachedException(portfolioId);
@@ -156,12 +156,12 @@ public class PortfolioHoldingService {
         return portfolioRepository.save(portfolio);
     }
 
-    public List<PortfolioHolding> getAll(String portfolioId) {
+    public List<PortfolioHolding> getAll(Long portfolioId) {
         findPortfolio(portfolioId);
         return holdingRepository.findByPortfolioId(portfolioId);
     }
 
-    public PortfolioHoldingSummaryResponse getSummary(String portfolioId) {
+    public PortfolioHoldingSummaryResponse getSummary(Long portfolioId) {
         findPortfolio(portfolioId);
         List<PortfolioHolding> holdings = holdingRepository.findByPortfolioId(portfolioId);
         BigDecimal totalValue = holdings.stream()
@@ -170,7 +170,7 @@ public class PortfolioHoldingService {
         return new PortfolioHoldingSummaryResponse(holdings.size(), totalValue);
     }
 
-    public List<EligibleSecurityResponse> getEligibleSecurities(String portfolioId) {
+    public List<EligibleSecurityResponse> getEligibleSecurities(Long portfolioId) {
         Portfolio portfolio = findPortfolio(portfolioId);
         if (portfolio.getTheme() == null) {
             throw new ThemeNotAttachedException(portfolioId);
@@ -196,13 +196,13 @@ public class PortfolioHoldingService {
         return securities;
     }
 
-    public PortfolioHolding getById(String portfolioId, Long holdingId) {
+    public PortfolioHolding getById(Long portfolioId, Long holdingId) {
         findPortfolio(portfolioId);
         return holdingRepository.findByIdAndPortfolioId(holdingId, portfolioId)
                 .orElseThrow(() -> new HoldingGuardrailException("Holding not found: " + holdingId));
     }
 
-        public PortfolioHolding update(String portfolioId, Long holdingId, UpdateHoldingRequest request) {
+        public PortfolioHolding update(Long portfolioId, Long holdingId, UpdateHoldingRequest request) {
             BigDecimal shares = requireShares(request == null ? null : request.shares());
 
         Portfolio portfolio = findPortfolio(portfolioId);
@@ -251,7 +251,7 @@ public class PortfolioHoldingService {
         return holdingRepository.save(holding);
         }
 
-    public void delete(String portfolioId, Long holdingId) {
+    public void delete(Long portfolioId, Long holdingId) {
         holdingRepository.delete(getById(portfolioId, holdingId));
         Portfolio portfolio = findPortfolio(portfolioId);
         portfolio.setHoldingsSaved(false);
@@ -259,8 +259,8 @@ public class PortfolioHoldingService {
         portfolioRepository.save(portfolio);
     }
 
-    private Portfolio findPortfolio(String portfolioId) {
-        if (portfolioId == null || portfolioId.isBlank()) {
+    private Portfolio findPortfolio(Long portfolioId) {
+        if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
         return portfolioRepository.findById(portfolioId)

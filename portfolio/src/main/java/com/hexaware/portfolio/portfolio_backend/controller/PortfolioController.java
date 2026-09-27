@@ -38,19 +38,19 @@ public class PortfolioController {
     }
 
     @GetMapping("/{portfolioId}")
-    public ResponseEntity<Portfolio> getById(@PathVariable String portfolioId) {
+    public ResponseEntity<Portfolio> getById(@PathVariable Long portfolioId) {
         return ResponseEntity.ok(portfolioService.getById(portfolioId));
     }
 
     @PutMapping("/{portfolioId}")
     public ResponseEntity<Portfolio> update(
-            @PathVariable String portfolioId,
+            @PathVariable Long portfolioId,
             @RequestBody CreatePortfolioRequest request) {
         return ResponseEntity.ok(portfolioService.update(portfolioId, request));
     }
 
     @DeleteMapping("/{portfolioId}")
-    public ResponseEntity<Void> delete(@PathVariable String portfolioId) {
+    public ResponseEntity<Void> delete(@PathVariable Long portfolioId) {
         portfolioService.delete(portfolioId);
         return ResponseEntity.noContent().build();
     }

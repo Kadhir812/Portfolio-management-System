@@ -12,6 +12,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -42,7 +43,8 @@ public class Portfolio {
     private Currency currency;               // INR | USD | GBP
 
     @Enumerated(EnumType.STRING)
-    private BenchMark benchmerk;             // NIFTY50 | NASDAQ | SMP500
+    @Column(name = "benchmerk")
+    private BenchMark benchmark;             // NIFTY50 | NASDAQ | SMP500
 
     @Enumerated(EnumType.STRING)
     private Exchange exchange;               // NSE | BSE
