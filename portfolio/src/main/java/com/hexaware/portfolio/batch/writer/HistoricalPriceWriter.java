@@ -17,7 +17,7 @@ public class HistoricalPriceWriter implements ItemWriter<DailyPrice> {
 
     public HistoricalPriceWriter(DailyPriceRepository repository) {
         this.repository = repository;
-    }
+    }//we inject repo into constructor so that writer can read/write  to the database
 
     @Override
     public void write(Chunk<? extends DailyPrice> chunk) {
