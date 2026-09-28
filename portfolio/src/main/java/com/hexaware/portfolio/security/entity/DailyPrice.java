@@ -18,52 +18,51 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+@Entity
+@Table(
+    name = "daily_prices",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_daily_price_security_date",
+            columnNames = {"security_id", "trade_date"}
+        )
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "stocks_daily_prices", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_daily_price_isin_date", columnNames = { "isin", "trade_date" })
-})
 public class DailyPrice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
-    @Column(name = "isin", nullable = false, length = 12)
-    private String isin;
+    @Column(name = "security_id", nullable = false)
+    private Long securityId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "isin", referencedColumnName = "isin", insertable = false, updatable = false)
+    @JoinColumn(
+        name = "security_id",
+        referencedColumnName = "security_id",
+        insertable = false,
+        updatable = false
+    )
     private SecurityDetails securityDetails;
 
     @Column(name = "trade_date", nullable = false)
     private LocalDate tradeDate;
 
-    @Column(name = "open_price")
     private BigDecimal openPrice;
-
-    @Column(name = "high_price")
     private BigDecimal highPrice;
-
-    @Column(name = "low_price")
     private BigDecimal lowPrice;
-
-    @Column(name = "close_price")
     private BigDecimal closePrice;
-
-    @Column(name = "prev_close")
     private BigDecimal prevClose;
-
-    @Column(name = "last_price")
     private BigDecimal lastPrice;
 
-    @Column(name = "volume")
     private Long volume;
 
-    @Column(name = "nav")
     private BigDecimal nav;
+    private BigDecimal spotPrice;
+    private BigDecimal valuationPrice;
 }
