@@ -18,6 +18,7 @@ import com.hexaware.portfolio.batch.processor.HistoricalPriceProcessor;
 import com.hexaware.portfolio.batch.reader.HistoricalPriceCsvReader;
 import com.hexaware.portfolio.batch.writer.HistoricalPriceWriter;
 import com.hexaware.portfolio.security.entity.DailyPrice;
+import com.hexaware.portfolio.security.repository.SecurityDetailsRepository;
 
 import java.nio.file.Path;
 
@@ -26,10 +27,13 @@ public class BatchConfig {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
+    private final SecurityDetailsRepository securityDetailsRepository;
 
-    public BatchConfig(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+    public BatchConfig(JobRepository jobRepository, PlatformTransactionManager transactionManager,
+            SecurityDetailsRepository securityDetailsRepository) {
         this.jobRepository = jobRepository;
         this.transactionManager = transactionManager;
+        this.securityDetailsRepository = securityDetailsRepository;
     }
 
     @Bean
@@ -64,6 +68,6 @@ public class BatchConfig {
             @Value("#{jobParameters['isin']}") String isin,
             @Value("#{jobParameters['symbol']}") String symbol,
             @Value("#{jobParameters['series']}") String series) {
-        return new HistoricalPriceProcessor(isin, symbol, series);
+        return new HistoricalPriceProcessor(isin, symbol, series, securityDetailsRepository);
     }
 }

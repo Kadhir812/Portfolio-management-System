@@ -11,14 +11,13 @@ import com.hexaware.portfolio.security.entity.DailyPrice;
 
 public interface DailyPriceRepository extends JpaRepository<DailyPrice, Long> {
 
-    List<DailyPrice> findByIsin(String isin);
+    List<DailyPrice> findBySecurityId(Long securityId);
 
-    List<DailyPrice> findByIsinAndTradeDateBetween(String isin, LocalDate from, LocalDate to);
+    List<DailyPrice> findBySecurityIdAndTradeDateBetween(Long securityId, LocalDate from, LocalDate to);
 
-    Optional<DailyPrice> findByIsinAndTradeDate(String isin, LocalDate date);
+    Optional<DailyPrice> findBySecurityIdAndTradeDate(Long securityId, LocalDate date);
 
-    Optional<DailyPrice> findTopByIsinOrderByTradeDateDesc(String isin);
+    Optional<DailyPrice> findTopBySecurityIdOrderByTradeDateDesc(Long securityId);
 
-    
-    boolean existsByIsin(String isin);
+    boolean existsBySecurityId(Long securityId);
 }

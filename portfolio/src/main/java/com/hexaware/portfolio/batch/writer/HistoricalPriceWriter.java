@@ -23,9 +23,9 @@ public class HistoricalPriceWriter implements ItemWriter<DailyPrice> {
     public void write(Chunk<? extends DailyPrice> chunk) {
         List<DailyPrice> rows = new ArrayList<>(chunk.size());
         for (DailyPrice incoming : chunk) {
-            DailyPrice stored = repository.findByIsinAndTradeDate(
-                    incoming.getIsin(), incoming.getTradeDate()).orElseGet(DailyPrice::new);
-            stored.setIsin(incoming.getIsin());
+                DailyPrice stored = repository.findBySecurityIdAndTradeDate(
+                    incoming.getSecurityId(), incoming.getTradeDate()).orElseGet(DailyPrice::new);
+                stored.setSecurityId(incoming.getSecurityId());
             stored.setTradeDate(incoming.getTradeDate());
             stored.setPrevClose(incoming.getPrevClose());
             stored.setOpenPrice(incoming.getOpenPrice());
@@ -33,6 +33,10 @@ public class HistoricalPriceWriter implements ItemWriter<DailyPrice> {
             stored.setLowPrice(incoming.getLowPrice());
             stored.setLastPrice(incoming.getLastPrice());
             stored.setClosePrice(incoming.getClosePrice());
+            stored.setVolume(incoming.getVolume());
+            stored.setNav(incoming.getNav());
+            stored.setSpotPrice(incoming.getSpotPrice());
+            stored.setValuationPrice(incoming.getValuationPrice());
             rows.add(stored);
         }
         repository.saveAll(rows);

@@ -89,7 +89,7 @@ public class DailyPriceScheduler {
 
     private void importSecurity(SecurityDetails security) throws Exception {
         DailyPrice latestPrice = dailyPriceRepository
-        .findTopByIsinOrderByTradeDateDesc(security.getIsin())
+        .findTopBySecurityIdOrderByTradeDateDesc(security.getSecurityId())
         .orElse(null);
 
 LocalDate fromDate;
@@ -129,7 +129,7 @@ String url = apiUrl
             : csvRows(payload, security);
         for (DailyPrice incoming : incomingRows) {
             DailyPrice stored = dailyPriceRepository
-                    .findByIsinAndTradeDate(incoming.getIsin(), incoming.getTradeDate())
+                    .findBySecurityIdAndTradeDate(incoming.getSecurityId(), incoming.getTradeDate())
                     .orElseGet(DailyPrice::new);
             copyValues(incoming, stored);
             dailyPriceRepository.save(stored);
@@ -144,7 +144,7 @@ String url = apiUrl
         JsonNode root = objectMapper.readTree(payload);
         List<DailyPrice> rows = new ArrayList<>();
         for (JsonNode item : records(root)) {
-            rows.add(toDailyPrice(item, security.getIsin()));
+            rows.add(toDailyPrice(item, security));
         }
         return rows;
     }
@@ -168,7 +168,7 @@ String url = apiUrl
                     continue;
                 }
                 rows.add(DailyPrice.builder()
-                        .isin(security.getIsin())
+                    .securityId(security.getSecurityId())
                         .tradeDate(parseDate(value(record, headers, "date")))
                         .prevClose(decimal(value(record, headers, "prevclose")))
                         .openPrice(decimal(value(record, headers, "openprice")))
@@ -206,13 +206,13 @@ String url = apiUrl
         return records;
     }
 
-    private DailyPrice toDailyPrice(JsonNode item, String isin) {
+    private DailyPrice toDailyPrice(JsonNode item, SecurityDetails security) {
         String date = text(item, "date", "tradeDate", "trade_date");
         if (date == null) {
             throw new IllegalArgumentException("Daily price payload has no trade date");
         }
         return DailyPrice.builder()
-                .isin(isin)
+            .securityId(security.getSecurityId())
                 .tradeDate(parseDate(date))
                 .prevClose(decimal(item, "prevClose", "prev_close", "previousClose"))
                 .openPrice(decimal(item, "openPrice", "open_price", "open"))
@@ -222,11 +222,13 @@ String url = apiUrl
                 .closePrice(decimal(item, "closePrice", "close_price", "close"))
                 // .volume(longValue(item, "volume", "totalTradedQuantity"))
                 .nav(decimal(item, "nav"))
+                .spotPrice(decimal(item, "spotPrice", "spot_price", "spot"))
+                .valuationPrice(valuationPrice(item, security.getAssetType()))
                 .build();
     }
 
     private static void copyValues(DailyPrice source, DailyPrice target) {
-        target.setIsin(source.getIsin());
+            target.setSecurityId(source.getSecurityId());
         target.setTradeDate(source.getTradeDate());
         target.setPrevClose(source.getPrevClose());
         target.setOpenPrice(source.getOpenPrice());
@@ -236,6 +238,16 @@ String url = apiUrl
         target.setClosePrice(source.getClosePrice());
         // target.setVolume(source.getVolume());
         target.setNav(source.getNav());
+        target.setSpotPrice(source.getSpotPrice());
+        target.setValuationPrice(source.getValuationPrice());
+    }
+
+    private static BigDecimal valuationPrice(JsonNode item, com.hexaware.portfolio.security.entity.AssetType assetType) {
+        return switch (assetType) {
+            case MUTUAL -> decimal(item, "nav");
+            case COMMODITY -> decimal(item, "spotPrice", "spot_price", "spot");
+            default -> decimal(item, "closePrice", "close_price", "close", "lastPrice", "last_price", "last");
+        };
     }
 
     private static String text(JsonNode item, String... names) {
@@ -253,17 +265,8 @@ String url = apiUrl
         return decimal(value);
     }
 
-    private static Long longValue(JsonNode item, String... names) {
-        String value = text(item, names);
-        return longValue(value);
-    }
-
     private static BigDecimal decimal(String value) {
         return value == null || value.isBlank() ? null : new BigDecimal(value.replace(",", "").trim());
-    }
-
-    private static Long longValue(String value) {
-        return value == null || value.isBlank() ? null : Long.valueOf(value.replace(",", "").trim());
     }
 
     private static LocalDate parseDate(String value) {

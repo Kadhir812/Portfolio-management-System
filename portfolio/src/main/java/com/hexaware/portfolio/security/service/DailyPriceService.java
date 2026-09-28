@@ -17,25 +17,25 @@ public class DailyPriceService {
 
     private final DailyPriceRepository repo;
 
-    public List<DailyPrice> getByIsin(String isin) {
-        return repo.findByIsin(isin);
+    public List<DailyPrice> getBySecurityId(Long securityId) {
+        return repo.findBySecurityId(securityId);
     }
 
-    public List<DailyPrice> getByIsinRange(String isin, LocalDate from, LocalDate to) {
-        return repo.findByIsinAndTradeDateBetween(isin, from, to);
+    public List<DailyPrice> getBySecurityIdRange(Long securityId, LocalDate from, LocalDate to) {
+        return repo.findBySecurityIdAndTradeDateBetween(securityId, from, to);
     }
 
-    public Optional<DailyPrice> getByIsinAndTradeDate(String isin, LocalDate date) {
-        return repo.findByIsinAndTradeDate(isin, date);
+    public Optional<DailyPrice> getBySecurityIdAndTradeDate(Long securityId, LocalDate date) {
+        return repo.findBySecurityIdAndTradeDate(securityId, date);
     }
 
-    public Optional<LocalDate> lastLoadedDate(String isin) {
-        return repo.findTopByIsinOrderByTradeDateDesc(isin)
+    public Optional<LocalDate> lastLoadedDate(Long securityId) {
+        return repo.findTopBySecurityIdOrderByTradeDateDesc(securityId)
                 .map(DailyPrice::getTradeDate);
     }
 
-    public boolean hasAny(String isin) {
-        return repo.existsByIsin(isin);
+    public boolean hasAny(Long securityId) {
+        return repo.existsBySecurityId(securityId);
     }
 
     public DailyPrice save(DailyPrice entity) {

@@ -53,16 +53,33 @@ public class DailyPrice {
     @Column(name = "trade_date", nullable = false)
     private LocalDate tradeDate;
 
+    @Column(name = "open_price", precision = 20, scale = 6)
     private BigDecimal openPrice;
+
+    @Column(name = "high_price", precision = 20, scale = 6)
     private BigDecimal highPrice;
+
+    @Column(name = "low_price", precision = 20, scale = 6)
     private BigDecimal lowPrice;
+
+    @Column(name = "close_price", precision = 20, scale = 6)
     private BigDecimal closePrice;
+
+    @Column(name = "prev_close", precision = 20, scale = 6)
     private BigDecimal prevClose;
+
+    @Column(name = "last_price", precision = 20, scale = 6)
     private BigDecimal lastPrice;
 
+    @Column(name = "volume")
     private Long volume;
 
+    @Column(name = "nav", precision = 20, scale = 6)
     private BigDecimal nav;
+
+    @Column(name = "spot_price", precision = 20, scale = 6)
     private BigDecimal spotPrice;
+
+    @Column(name = "valuation_price", precision = 20, scale = 6)
     private BigDecimal valuationPrice;
 }

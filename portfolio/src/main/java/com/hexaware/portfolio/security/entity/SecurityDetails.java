@@ -6,6 +6,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -25,7 +27,7 @@ public class SecurityDetails {
     private Long securityId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "asset_type", nullable = false, length = 20)
+    @Column(name = "asset_type", nullable = false, length = 20, columnDefinition = "varchar(20)")
     private AssetType assetType;
 
     @Column(name = "isin", unique = true, length = 12)
@@ -89,5 +91,9 @@ public class SecurityDetails {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public String getSymbolAndSeries() {
+        return symbol + "/" + series;
     }
 }

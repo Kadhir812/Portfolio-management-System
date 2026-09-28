@@ -79,12 +79,14 @@ public class HistoricalPriceDirectoryRunner implements ApplicationRunner {
 
     private void saveSecurityDetails(SecurityImport security) {
         validateIsin(security.isin());
-        SecurityDetails details = securityDetailsRepository.findById(security.isin())
+        SecurityDetails details = securityDetailsRepository.findByIsin(security.isin())
                 .orElseGet(SecurityDetails::new);
         details.setIsin(security.isin());
         details.setSymbol(security.symbol());
         details.setSeries("EQ");
         details.setDescription(security.description());
+        details.setName(security.description());
+        details.setStatus("ACTIVE");
         details.setAssetType(AssetType.EQUITY);
         securityDetailsRepository.save(details);
     }

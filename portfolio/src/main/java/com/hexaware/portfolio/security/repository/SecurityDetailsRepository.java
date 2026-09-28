@@ -10,7 +10,7 @@ import com.hexaware.portfolio.security.entity.AssetType;
 import com.hexaware.portfolio.security.entity.SecurityDetails;
 
 
-public interface SecurityDetailsRepository extends JpaRepository<SecurityDetails, String> {
+public interface SecurityDetailsRepository extends JpaRepository<SecurityDetails, Long> {
 
     Optional<SecurityDetails> findByIsin(String isin);
 
