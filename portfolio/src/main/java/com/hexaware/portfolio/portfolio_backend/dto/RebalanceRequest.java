@@ -5,5 +5,5 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record RebalanceRequest(LocalDate tradeDate, List<TradeOrder> trades) {
-    public record TradeOrder(String isin, BigDecimal signedShares) {}
+    public record TradeOrder(Long securityId, String isin, BigDecimal signedShares) {}
 }

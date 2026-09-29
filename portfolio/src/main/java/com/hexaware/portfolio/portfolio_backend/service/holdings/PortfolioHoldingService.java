@@ -182,7 +182,7 @@ public class PortfolioHoldingService {
             BigDecimal currentPrice = securityService.priceValue(daily), value = currentPrice.multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal averageCost = bought.getOrDefault(entry.getKey(), ZERO).signum() == 0 ? ZERO : costs.get(entry.getKey()).divide(bought.get(entry.getKey()), 6, RoundingMode.HALF_UP);
             BigDecimal gain = currentPrice.subtract(averageCost).multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
-            output.add(new PortfolioValuationResponse.HoldingValuation(security.getIsin(), t.getSymbol(), t.getSecurityName(), t.getAssetClass(), entry.getValue(), averageCost, currentPrice, daily.getTradeDate(), value, gain));
+            output.add(new PortfolioValuationResponse.HoldingValuation(security.getSecurityId(), security.getIsin(), t.getSymbol(), t.getSecurityName(), t.getAssetClass(), entry.getValue(), averageCost, currentPrice, daily.getTradeDate(), value, gain));
             classValues.merge(t.getAssetClass(), value, BigDecimal::add); total = total.add(value); totalCost = totalCost.add(averageCost.multiply(entry.getValue()));
             if (daily.getTradeDate().isBefore(effective)) effective = daily.getTradeDate();
         }
@@ -199,11 +199,15 @@ public class PortfolioHoldingService {
                 BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.assetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
                 BigDecimal targetPct = BigDecimal.valueOf(target.percentage());
                 BigDecimal drift = current.subtract(targetPct).setScale(2, RoundingMode.HALF_UP);
-                allocation.add(new PortfolioValuationResponse.AllocationDrift(target.assetClass(), targetPct, current, drift, drift.abs().compareTo(BigDecimal.valueOf(5)) > 0));
+                allocation.add(new PortfolioValuationResponse.AllocationDrift(target.assetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
             }
         }
         BigDecimal gains = total.subtract(totalCost).setScale(2, RoundingMode.HALF_UP);
         return new PortfolioValuationResponse(purchase, requested, effective, total.setScale(2, RoundingMode.HALF_UP), gains, output, allocation, availableDates(portfolioId, purchase));
+    }
+
+    static boolean exceedsDriftLimit(BigDecimal drift) {
+        return drift.abs().compareTo(BigDecimal.valueOf(5)) > 0;
     }
 
     @Transactional
@@ -212,18 +216,25 @@ public class PortfolioHoldingService {
         ensureTradeHistory(p);
         if (request == null || request.tradeDate() == null || request.trades() == null || request.trades().isEmpty()) throw new PortfolioValidationException("Trade date and at least one trade are required");
         if (request.tradeDate().isBefore(p.getPurchaseDate()) || request.tradeDate().isAfter(LocalDate.now())) throw new PortfolioValidationException("Trade date must be between purchase date and today");
-        Map<String, BigDecimal> quantitiesAtTradeDate = new HashMap<>();
+        Map<Long, BigDecimal> quantitiesAtTradeDate = new HashMap<>();
         for (PortfolioTrade prior : trades.findByPortfolioIdAndTradeDateLessThanEqualOrderByTradeDateAscIdAsc(portfolioId, request.tradeDate())) {
-            quantitiesAtTradeDate.merge(prior.getIsin(), prior.getSignedShares(), BigDecimal::add);
+            quantitiesAtTradeDate.merge(securityService.tradeSecurityId(prior), prior.getSignedShares(), BigDecimal::add);
         }
-        Map<String, BigDecimal> requestedTrades = new LinkedHashMap<>();
+        Map<Long, BigDecimal> requestedTrades = new LinkedHashMap<>();
         for (RebalanceRequest.TradeOrder order : request.trades()) {
-            if (order.isin() != null && order.signedShares() != null) requestedTrades.merge(order.isin(), order.signedShares(), BigDecimal::add);
+            if (order == null || order.signedShares() == null) continue;
+            if (order.signedShares().signum() > 0) throw new PortfolioValidationException("Rebalance accepts sell orders only; add purchases from holdings separately");
+            Long securityId = order.securityId();
+            if (securityId == null && order.isin() != null) {
+                securityId = securities.findByIsin(order.isin())
+                        .orElseThrow(() -> new SecurityNotFoundException(order.isin())).getSecurityId();
+            }
+            if (securityId != null) requestedTrades.merge(securityId, order.signedShares(), BigDecimal::add);
         }
         for (var order : requestedTrades.entrySet()) {
             BigDecimal signedShares = order.getValue();
             if (signedShares.signum() == 0) continue;
-            SecurityDetails security = securities.findByIsin(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(order.getKey()));
+            SecurityDetails security = securities.findById(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(order.getKey())));
             BigDecimal afterTrade = quantitiesAtTradeDate.getOrDefault(order.getKey(), ZERO).add(signedShares);
             if (afterTrade.signum() < 0) throw new PortfolioValidationException("Cannot sell more shares than the portfolio owns: " + security.getSymbol());
             DailyPrice price = securityService.priceOnOrBefore(security.getSecurityId(), request.tradeDate());

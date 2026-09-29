@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ThemeEditorPage } from './pages/ThemeEditorPage';
 import { HoldingsPage } from './pages/HoldingsPage';
 import { RebalancePage } from './pages/RebalancePage';
+import { AlertsPage } from './pages/AlertsPage';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ function ProtectedApp() {
         <Route path="/portfolios/overview" element={<DashboardAccessNotice />} />
         <Route path="/portfolios/:id" element={<DashboardPage />} />
         <Route path="/themes" element={<ThemeEditorPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/portfolios/:id/holdings" element={<HoldingsPage />} />
         <Route path="/portfolios/:id/rebalance" element={<RebalancePage />} />
         <Route path="*" element={<Navigate to="/portfolios" replace />} />
