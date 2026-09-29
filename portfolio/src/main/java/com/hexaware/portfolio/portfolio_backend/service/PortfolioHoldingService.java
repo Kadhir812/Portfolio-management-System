@@ -48,10 +48,13 @@ public class PortfolioHoldingService {
         return getEligibleSecurities(portfolioId, null);
     }
     public List<EligibleSecurityResponse> getEligibleSecurities(Long portfolioId, LocalDate asOfDate) {
-        ownPortfolio(portfolioId);
+        Portfolio portfolio = ownPortfolio(portfolioId);
+        Set<AssetClass> allowedAssetClasses = allowedAssetClasses(portfolio);
         return securities.findAll().stream().map(s -> {
+            AssetClass assetClass = assetClass(s.getAssetType());
+            if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass)) return null;
             Optional<DailyPrice> p = asOfDate == null ? Optional.ofNullable(latestPrice(s.getSecurityId())) : prices.findTopBySecurityIdAndTradeDateLessThanEqualOrderByTradeDateDesc(s.getSecurityId(), asOfDate);
-            return p.map(price -> new EligibleSecurityResponse(s.getIsin(), s.getSymbol(), s.getDescription(), assetClass(s.getAssetType()), priceValue(price), price.getTradeDate())).orElse(null);
+            return p.map(price -> new EligibleSecurityResponse(s.getIsin(), s.getSymbol(), s.getDescription(), assetClass, priceValue(price), price.getTradeDate())).orElse(null);
         }).filter(Objects::nonNull).toList();
     }
 
@@ -60,6 +63,10 @@ public class PortfolioHoldingService {
         Portfolio p = ownPortfolio(portfolioId);
         if (request == null || request.isin() == null || request.shares() == null || request.shares().signum() <= 0) throw new PortfolioValidationException("A security and positive share quantity are required");
         SecurityDetails s = securities.findByIsin(request.isin()).orElseThrow(() -> new SecurityNotFoundException(request.isin()));
+        Set<AssetClass> allowedAssetClasses = allowedAssetClasses(p);
+        if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass(s.getAssetType()))) {
+            throw new PortfolioValidationException("This security is not part of the portfolio's investment theme");
+        }
         if (holdings.findByPortfolioId(portfolioId).stream().anyMatch(h -> h.getIsin().equals(request.isin()))) throw new PortfolioValidationException("This security is already in the portfolio");
         LocalDate transactionDate = p.isHoldingsSaved() ? LocalDate.now() : (p.getPurchaseDate() == null ? LocalDate.now() : p.getPurchaseDate());
         DailyPrice price = priceOnOrBefore(s.getSecurityId(), transactionDate);
@@ -261,5 +268,11 @@ public class PortfolioHoldingService {
     }
     private AssetClass assetClass(AssetType type) {
         return switch (type) { case EQUITY -> AssetClass.STOCKS; case MUTUAL -> AssetClass.MUTUAL_FUNDS; case COMMODITY -> AssetClass.COMMODITIES; case BOND -> AssetClass.BONDS; case CRYPTO -> AssetClass.CRYPTO; case REIT -> AssetClass.REITS; case ETF -> AssetClass.ETFS; case CASH -> AssetClass.CASH; };
+    }
+    private Set<AssetClass> allowedAssetClasses(Portfolio portfolio) {
+        if (portfolio.getTheme() == null) return Set.of();
+        return themes.findByTheme(portfolio.getTheme()).allocations().stream()
+                .map(ThemeAllocationResponse::assetClass)
+                .collect(java.util.stream.Collectors.toSet());
     }
 }

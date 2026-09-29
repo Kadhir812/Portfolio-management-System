@@ -11,8 +11,10 @@ export function HoldingsPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
+  const [attachedTheme, setAttachedTheme] = useState(null);
   const [summary, setSummary] = useState({ holdingCount: 0, totalValue: 0 });
   const [eligibleSecurities, setEligibleSecurities] = useState([]);
+  const [selectedAssetClass, setSelectedAssetClass] = useState('');
   const [selectedIsin, setSelectedIsin] = useState('');
   const [shares, setShares] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,13 +31,16 @@ export function HoldingsPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const [portfolioData, holdingData, summaryData, eligibleData] = await Promise.all([
+        const [portfolioData, holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
           api.portfolios.get(portfolioId),
           api.holdings.list(portfolioId),
           api.holdings.summary(portfolioId),
-          api.holdings.eligibleSecurities(portfolioId)
+          api.holdings.eligibleSecurities(portfolioId),
+          api.themes.get(portfolioId).catch(() => null),
+          api.themes.list().catch(() => [])
         ]);
         setPortfolio(portfolioData);
+        setAttachedTheme(themeData || themeDefinitions.find((theme) => theme.theme === portfolioData.theme) || null);
         setRows(holdingData);
         setSummary(summaryData);
         setEligibleSecurities(eligibleData);
@@ -50,13 +55,16 @@ export function HoldingsPage() {
   }, [portfolioId]);
 
   const refreshData = async () => {
-    const [portfolioData, holdingData, summaryData, eligibleData] = await Promise.all([
+    const [portfolioData, holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
       api.portfolios.get(portfolioId),
       api.holdings.list(portfolioId),
       api.holdings.summary(portfolioId),
-      api.holdings.eligibleSecurities(portfolioId)
+      api.holdings.eligibleSecurities(portfolioId),
+      api.themes.get(portfolioId).catch(() => null),
+      api.themes.list().catch(() => [])
     ]);
     setPortfolio(portfolioData);
+    setAttachedTheme(themeData || themeDefinitions.find((theme) => theme.theme === portfolioData.theme) || null);
     setRows(holdingData);
     setSummary(summaryData);
     setEligibleSecurities(eligibleData);
@@ -123,6 +131,12 @@ export function HoldingsPage() {
     }
   };
 
+  const themeAssetClasses = attachedTheme?.allocations?.map((allocation) => allocation.assetClass) || [];
+  const visibleSecurities = selectedAssetClass
+    ? eligibleSecurities.filter((security) => security.assetClass === selectedAssetClass)
+    : eligibleSecurities;
+  const formatAssetClass = (assetClass) => assetClass.replaceAll('_', ' ');
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -165,7 +179,23 @@ export function HoldingsPage() {
           <CardTitle>Add security</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
+          <div className="grid gap-3 md:grid-cols-[180px_1fr_180px_auto]">
+            <select
+              value={selectedAssetClass}
+              onChange={(event) => {
+                setSelectedAssetClass(event.target.value);
+                setSelectedIsin('');
+              }}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              disabled={loading || saving}
+            >
+              <option value="">All theme assets</option>
+              {themeAssetClasses.map((assetClass) => (
+                <option key={assetClass} value={assetClass}>
+                  {formatAssetClass(assetClass)}
+                </option>
+              ))}
+            </select>
             <select
               value={selectedIsin}
               onChange={(event) => setSelectedIsin(event.target.value)}
@@ -173,9 +203,9 @@ export function HoldingsPage() {
               disabled={loading || saving}
             >
               <option value="">Select eligible security</option>
-              {eligibleSecurities.map((security) => (
+              {visibleSecurities.map((security) => (
                 <option key={security.isin} value={security.isin}>
-                  {security.symbol} - {security.assetClass} - ₹{Number(security.latestPrice || 0).toLocaleString('en-IN')}
+                  {security.symbol} - {formatAssetClass(security.assetClass)} - ₹{Number(security.latestPrice || 0).toLocaleString('en-IN')}
                 </option>
               ))}
             </select>
