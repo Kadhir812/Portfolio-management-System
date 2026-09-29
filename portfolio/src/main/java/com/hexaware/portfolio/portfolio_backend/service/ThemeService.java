@@ -42,7 +42,6 @@ public class ThemeService {
 
         Portfolio portfolio = findPortfolio(portfolioId);
         portfolio.setTheme(theme);
-        portfolio.setHoldingsSaved(false);
         portfolio.setUpdatedAt(Instant.now());
         return portfolioRepository.save(portfolio);
     }
@@ -58,7 +57,6 @@ public class ThemeService {
     public void removeTheme(Long portfolioId) {
         Portfolio portfolio = findPortfolio(portfolioId);
         portfolio.setTheme(null);
-        portfolio.setHoldingsSaved(false);
         portfolio.setUpdatedAt(Instant.now());
         portfolioRepository.save(portfolio);
     }

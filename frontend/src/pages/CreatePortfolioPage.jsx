@@ -28,7 +28,8 @@ export function CreatePortfolioPage() {
     benchmark: 'NIFTY50',
     exchange: 'NSE',
     rebalanceFrequency: 'MONTHLY',
-    amount: 100000
+    amount: 100000,
+    purchaseDate: new Date().toISOString().slice(0, 10)
   });
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [themes, setThemes] = useState([]);
@@ -63,7 +64,8 @@ export function CreatePortfolioPage() {
           benchmark: portfolio.benchmark || 'NIFTY50',
           exchange: portfolio.exchange || 'NSE',
           rebalanceFrequency: portfolio.rebalanceFrequency || 'MONTHLY',
-          amount: portfolio.amount || 0
+          amount: portfolio.amount || 0,
+          purchaseDate: portfolio.purchaseDate || new Date().toISOString().slice(0, 10)
         });
         setCreatedPortfolioId(portfolio.id);
         setSelectedTheme(portfolio.theme || null);
@@ -84,7 +86,8 @@ export function CreatePortfolioPage() {
       setError('');
       const payload = {
         ...form,
-        amount: Number(form.amount)
+        amount: Number(form.amount),
+        purchaseDate: form.purchaseDate
       };
 
       if (isEditing) {
@@ -249,6 +252,19 @@ export function CreatePortfolioPage() {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Asset purchase date</span>
+                <input
+                  type="date"
+                  value={form.purchaseDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  disabled={isEditing}
+                  onChange={(e) => updateField('purchaseDate', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                />
+                <span className="mt-1 block text-xs text-slate-500">Historical prices on this date are used as your starting purchase prices.</span>
               </label>
 
               <label className="block">
