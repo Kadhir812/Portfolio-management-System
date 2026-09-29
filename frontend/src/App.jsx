@@ -7,6 +7,7 @@ import { CreatePortfolioPage } from './pages/CreatePortfolioPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ThemeEditorPage } from './pages/ThemeEditorPage';
 import { HoldingsPage } from './pages/HoldingsPage';
+import { RebalancePage } from './pages/RebalancePage';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ function ProtectedApp() {
         <Route path="/portfolios/:id" element={<DashboardPage />} />
         <Route path="/themes" element={<ThemeEditorPage />} />
         <Route path="/portfolios/:id/holdings" element={<HoldingsPage />} />
+        <Route path="/portfolios/:id/rebalance" element={<RebalancePage />} />
         <Route path="*" element={<Navigate to="/portfolios" replace />} />
       </Routes>
     </Layout>

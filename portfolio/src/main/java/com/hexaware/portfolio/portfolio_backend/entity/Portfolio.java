@@ -1,6 +1,7 @@
 package com.hexaware.portfolio.portfolio_backend.entity;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.BenchMark;
@@ -62,6 +63,9 @@ public class Portfolio {
     private RebalanceFrequency rebalanceFrequency; // DAILY | WEEKLY | MONTHLY
 
     private Double amount;
+
+    @Column(name = "purchase_date")
+    private LocalDate purchaseDate;
 
     private boolean holdingsSaved;
 

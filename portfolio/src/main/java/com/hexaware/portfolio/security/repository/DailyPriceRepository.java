@@ -19,5 +19,9 @@ public interface DailyPriceRepository extends JpaRepository<DailyPrice, Long> {
 
     Optional<DailyPrice> findTopBySecurityIdOrderByTradeDateDesc(Long securityId);
 
+    Optional<DailyPrice> findTopBySecurityIdAndTradeDateLessThanEqualOrderByTradeDateDesc(Long securityId, LocalDate date);
+
+    Optional<DailyPrice> findTopBySecurityIdAndTradeDateGreaterThanEqualOrderByTradeDateAsc(Long securityId, LocalDate date);
+
     boolean existsBySecurityId(Long securityId);
 }

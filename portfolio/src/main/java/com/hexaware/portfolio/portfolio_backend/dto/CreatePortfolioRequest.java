@@ -5,6 +5,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioType;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
+import java.time.LocalDate;
 
 public record CreatePortfolioRequest(
         String name,
@@ -13,5 +14,6 @@ public record CreatePortfolioRequest(
         BenchMark benchmark,
         Exchange exchange,
         RebalanceFrequency rebalanceFrequency,
-        Double amount) {
+        Double amount,
+        LocalDate purchaseDate) {
 }

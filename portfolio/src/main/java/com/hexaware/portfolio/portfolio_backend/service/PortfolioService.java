@@ -2,6 +2,7 @@ package com.hexaware.portfolio.portfolio_backend.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class PortfolioService {
                 .exchange(request.exchange())
                 .rebalanceFrequency(request.rebalanceFrequency())
                 .amount(request.amount())
+                .purchaseDate(request.purchaseDate() == null ? LocalDate.now() : request.purchaseDate())
                 .theme(null)
                 .createdAt(now)
                 .updatedAt(now)
@@ -63,7 +65,9 @@ public class PortfolioService {
         portfolio.setExchange(request.exchange());
         portfolio.setRebalanceFrequency(request.rebalanceFrequency());
         portfolio.setAmount(request.amount());
-        portfolio.setHoldingsSaved(false);
+        if (!portfolio.isHoldingsSaved() && request.purchaseDate() != null) {
+            portfolio.setPurchaseDate(request.purchaseDate());
+        }
         portfolio.setUpdatedAt(Instant.now());
         return portfolioRepository.save(portfolio);
     }
@@ -95,6 +99,9 @@ public class PortfolioService {
         }
         if (request.amount() == null || request.amount() < 0) {
             throw new PortfolioValidationException("Amount must be zero or greater");
+        }
+        if (request.purchaseDate() != null && request.purchaseDate().isAfter(LocalDate.now())) {
+            throw new PortfolioValidationException("Purchase date cannot be in the future");
         }
     }
 }

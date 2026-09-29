@@ -26,6 +26,12 @@ public class HistoricalPriceDirectoryRunner implements ApplicationRunner {
 
     private static final List<SecurityImport> IMPORTS = List.of(
             new SecurityImport(
+                    Path.of("./src/main/java/com/hexaware/portfolio/batch/data/23-09-2024-TO-24-09-2026-TCS-ALL-N.csv"),
+                    "INE467B01029", "TCS", "Tata Consultancy Services Ltd"),
+            new SecurityImport(
+                    Path.of("./src/main/java/com/hexaware/portfolio/batch/data/23-09-2024-TO-24-09-2026-INFY-ALL-N.csv"),
+                    "INE009A01021", "INFY", "Infosys Ltd"),
+            new SecurityImport(
                     Path.of("./src/main/java/com/hexaware/portfolio/batch/data/23-09-2024-TO-24-09-2026-HCLTECH-ALL-N.csv"),
                     "INE860A01027", "HCLTECH", "HCL Technologies Ltd"));
 

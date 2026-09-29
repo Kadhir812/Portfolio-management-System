@@ -60,7 +60,9 @@ export const api = {
 	holdings: {
 		list: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/holdings`)).data,
 		summary: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/holdings/summary`)).data,
-		eligibleSecurities: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/holdings/eligible-securities`)).data,
+		eligibleSecurities: async (portfolioId, date) => (await client.get(`/portfolios/${portfolioId}/holdings/eligible-securities`, { params: { date } })).data,
+		valuation: async (portfolioId, date) => (await client.get(`/portfolios/${portfolioId}/holdings/valuation`, { params: { date } })).data,
+		rebalance: async (portfolioId, payload) => client.post(`/portfolios/${portfolioId}/holdings/rebalance`, payload),
 		add: async (portfolioId, payload) => (await client.post(`/portfolios/${portfolioId}/holdings`, payload)).data,
 		update: async (portfolioId, holdingId, payload) => (await client.put(`/portfolios/${portfolioId}/holdings/${holdingId}`, payload)).data,
 		remove: async (portfolioId, holdingId) => client.delete(`/portfolios/${portfolioId}/holdings/${holdingId}`),
