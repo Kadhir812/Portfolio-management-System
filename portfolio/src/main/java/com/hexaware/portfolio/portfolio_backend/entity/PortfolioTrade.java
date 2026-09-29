@@ -15,7 +15,8 @@ public class PortfolioTrade {
     private Long id;
     @Column(name = "portfolio_id", nullable = false)
     private Long portfolioId;
-    @Column(nullable = false)
+    private Long securityId;
+    @Column(nullable = true)
     private String isin;
     private String symbol;
     @Column(name = "security_name")

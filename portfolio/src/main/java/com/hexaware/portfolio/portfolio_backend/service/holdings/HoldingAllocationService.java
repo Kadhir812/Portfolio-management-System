@@ -1,0 +1,66 @@
+package com.hexaware.portfolio.portfolio_backend.service.holdings;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.hexaware.portfolio.portfolio_backend.dto.ThemeAllocationResponse;
+import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
+import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
+import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
+import com.hexaware.portfolio.portfolio_backend.repository.PortfolioHoldingRepository;
+import com.hexaware.portfolio.portfolio_backend.repository.ThemeRepository;
+
+@Service
+public class HoldingAllocationService {
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
+    private final PortfolioHoldingRepository holdings;
+    private final ThemeRepository themes;
+
+    public HoldingAllocationService(PortfolioHoldingRepository holdings, ThemeRepository themes) {
+        this.holdings = holdings;
+        this.themes = themes;
+    }
+
+    public Set<AssetClass> allowedAssetClasses(Portfolio portfolio) {
+        if (portfolio.getTheme() == null) return Set.of();
+        return themes.findByTheme(portfolio.getTheme()).allocations().stream()
+                .map(ThemeAllocationResponse::assetClass)
+                .collect(Collectors.toSet());
+    }
+
+    public void ensureDoesNotExceedTarget(Portfolio portfolio, AssetClass assetClass,
+            BigDecimal proposedValue, PortfolioHolding excludedHolding) {
+        if (portfolio.getTheme() == null) return;
+        ThemeAllocationResponse target = themes.findByTheme(portfolio.getTheme()).allocations().stream()
+                .filter(allocation -> allocation.assetClass() == assetClass)
+                .findFirst().orElse(null);
+        if (target == null) return;
+
+        BigDecimal currentValue = holdings.findByPortfolioId(portfolio.getId()).stream()
+                .filter(holding -> holding != excludedHolding && holding.getAssetClass() == assetClass)
+                .map(PortfolioHolding::getValue).filter(Objects::nonNull).reduce(ZERO, BigDecimal::add);
+        BigDecimal targetValue = BigDecimal.valueOf(portfolio.getAmount())
+                .multiply(BigDecimal.valueOf(target.percentage()))
+                .divide(HUNDRED, 2, RoundingMode.HALF_UP);
+        BigDecimal proposedAllocation = currentValue.add(proposedValue);
+
+        if (assetClass == AssetClass.CASH) {
+            BigDecimal currentTotal = holdings.findByPortfolioId(portfolio.getId()).stream()
+                    .filter(holding -> holding != excludedHolding).map(PortfolioHolding::getValue)
+                    .filter(Objects::nonNull).reduce(ZERO, BigDecimal::add);
+            BigDecimal residualAfterAddition = BigDecimal.valueOf(portfolio.getAmount())
+                    .subtract(currentTotal.add(proposedValue)).max(ZERO);
+            proposedAllocation = currentValue.add(proposedValue).add(residualAfterAddition);
+        }
+        if (proposedAllocation.compareTo(targetValue.add(BigDecimal.ONE)) > 0) {
+            throw new PortfolioValidationException(assetClass + " holdings cannot exceed the theme target of " + target.percentage() + "%");
+        }
+    }
+}

@@ -36,6 +36,7 @@ public class PortfolioHolding {
     @Column(name = "portfolio_id", nullable = false)
     private Long portfolioId;
 
+    private Long securityId;
     private String isin;
     private String securityName;
     private String symbol;

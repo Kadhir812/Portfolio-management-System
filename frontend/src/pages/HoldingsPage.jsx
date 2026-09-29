@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Plus, Trash2, Save, ArrowLeft, RefreshCcw } from 'lucide-react';
+import { Save, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { HoldingMetrics } from '../components/holdings/HoldingMetrics';
+import { AddSecurityForm } from '../components/holdings/AddSecurityForm';
+import { AllocationSummary } from '../components/holdings/AllocationSummary';
+import { HoldingsTable } from '../components/holdings/HoldingsTable';
 
 export function HoldingsPage() {
   const { id: portfolioId } = useParams();
@@ -15,7 +17,7 @@ export function HoldingsPage() {
   const [summary, setSummary] = useState({ holdingCount: 0, totalValue: 0 });
   const [eligibleSecurities, setEligibleSecurities] = useState([]);
   const [selectedAssetClass, setSelectedAssetClass] = useState('');
-  const [selectedIsin, setSelectedIsin] = useState('');
+  const [selectedSecurityId, setSelectedSecurityId] = useState('');
   const [shares, setShares] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,16 +73,29 @@ export function HoldingsPage() {
   };
 
   const addHolding = async () => {
-    if (!selectedIsin || Number(shares) <= 0) {
+    if (!selectedSecurityId || Number(shares) <= 0) {
       setError('Select a security and enter shares greater than zero.');
+      return;
+    }
+
+    const targetAllocation = attachedTheme?.allocations?.find(
+      (allocation) => allocation.assetClass === selectedSecurity?.assetClass
+    );
+    const currentClassValue = rows
+      .filter((row) => row.assetClass === selectedSecurity?.assetClass)
+      .reduce((total, row) => total + Number(row.value || 0), 0);
+    const proposedClassValue = currentClassValue + Number(selectedSecurity?.latestPrice || 0) * Number(shares);
+    const targetClassValue = targetAllocation ? targetAmount * Number(targetAllocation.percentage) / 100 : null;
+    if (targetClassValue !== null && proposedClassValue > targetClassValue + 1) {
+      setError(`This holding would exceed the ${formatAssetClass(selectedSecurity.assetClass)} target of ${targetAllocation.percentage}%.`);
       return;
     }
 
     try {
       setSaving(true);
       setError('');
-      await api.holdings.add(portfolioId, { isin: selectedIsin, shares: Number(shares) });
-      setSelectedIsin('');
+      await api.holdings.add(portfolioId, { securityId: Number(selectedSecurityId), shares: Number(shares) });
+      setSelectedSecurityId('');
       setShares('');
       await refreshData();
     } catch (e) {
@@ -119,6 +134,10 @@ export function HoldingsPage() {
   };
 
   const saveHoldings = async () => {
+    if (attachedTheme && !allocationMatches) {
+      setError('Complete the theme allocation targets before saving holdings. Use the required amount shown for each asset class.');
+      return;
+    }
     try {
       setSaving(true);
       setError('');
@@ -131,11 +150,48 @@ export function HoldingsPage() {
     }
   };
 
-  const themeAssetClasses = attachedTheme?.allocations?.map((allocation) => allocation.assetClass) || [];
+  const themeAssetClasses = attachedTheme?.allocations
+    ?.map((allocation) => allocation.assetClass)
+    .filter((assetClass) => assetClass !== 'CASH') || [];
+  const investableSecurities = eligibleSecurities.filter((security) => security.assetClass !== 'CASH');
   const visibleSecurities = selectedAssetClass
-    ? eligibleSecurities.filter((security) => security.assetClass === selectedAssetClass)
-    : eligibleSecurities;
+    ? investableSecurities.filter((security) => security.assetClass === selectedAssetClass)
+    : investableSecurities;
+  const selectedSecurity = investableSecurities.find((security) => String(security.securityId) === selectedSecurityId);
+  const estimatedHoldingValue = Number(selectedSecurity?.latestPrice || 0) * Number(shares || 0);
   const formatAssetClass = (assetClass) => assetClass.replaceAll('_', ' ');
+  const targetAmount = Number(portfolio?.amount || 0);
+  const currentAllocationByClass = rows.reduce((totals, row) => {
+    totals[row.assetClass] = (totals[row.assetClass] || 0) + Number(row.value || 0);
+    return totals;
+  }, {});
+  currentAllocationByClass.CASH = (currentAllocationByClass.CASH || 0)
+    + Math.max(targetAmount - Number(summary.totalValue || 0), 0);
+  const selectedTargetAllocation = attachedTheme?.allocations?.find(
+    (allocation) => allocation.assetClass === selectedSecurity?.assetClass
+  );
+  const selectedClassValue = currentAllocationByClass[selectedSecurity?.assetClass] || 0;
+  const selectedTargetValue = selectedTargetAllocation
+    ? targetAmount * Number(selectedTargetAllocation.percentage) / 100
+    : 0;
+  const remainingTargetValue = Math.max(selectedTargetValue - selectedClassValue, 0);
+  const recommendedShares = Number(selectedSecurity?.latestPrice || 0) > 0
+    ? remainingTargetValue / Number(selectedSecurity.latestPrice)
+    : 0;
+  const allocationSummary = (attachedTheme?.allocations || []).map((allocation) => {
+    const currentAmount = currentAllocationByClass[allocation.assetClass] || 0;
+    const currentPercentage = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
+    return {
+      assetClass: allocation.assetClass,
+      targetPercentage: Number(allocation.percentage),
+      currentPercentage,
+      difference: currentPercentage - Number(allocation.percentage),
+      requiredAmount: Math.max(targetAmount * Number(allocation.percentage) / 100 - currentAmount, 0)
+    };
+  });
+  const allocationMatches = allocationSummary.length > 0
+    && Number(summary.totalValue || 0) <= targetAmount + 1
+    && allocationSummary.every((allocation) => Math.abs(allocation.difference) <= 0.5);
 
   return (
     <div className="space-y-6">
@@ -156,165 +212,49 @@ export function HoldingsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Holdings count</p>
-          <p className="mt-2 text-2xl font-bold">{summary.holdingCount}</p>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Residual cash</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">
-            ₹{Math.max(Number(portfolio?.amount || 0) - Number(summary.totalValue || 0), 0).toLocaleString('en-IN')}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Uninvested remainder available after price rounding</p>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Total value</p>
-          <p className="mt-2 text-2xl font-bold">₹{Number(summary.totalValue || 0).toLocaleString('en-IN')}</p>
-        </Card>
-      </div>
+      <HoldingMetrics summary={summary} portfolio={portfolio} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add security</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-[180px_1fr_180px_auto]">
-            <select
-              value={selectedAssetClass}
-              onChange={(event) => {
-                setSelectedAssetClass(event.target.value);
-                setSelectedIsin('');
-              }}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              disabled={loading || saving}
-            >
-              <option value="">All theme assets</option>
-              {themeAssetClasses.map((assetClass) => (
-                <option key={assetClass} value={assetClass}>
-                  {formatAssetClass(assetClass)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedIsin}
-              onChange={(event) => setSelectedIsin(event.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              disabled={loading || saving}
-            >
-              <option value="">Select eligible security</option>
-              {visibleSecurities.map((security) => (
-                <option key={security.isin} value={security.isin}>
-                  {security.symbol} - {formatAssetClass(security.assetClass)} - ₹{Number(security.latestPrice || 0).toLocaleString('en-IN')}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min="0.0001"
-              step="any"
-              value={shares}
-              onChange={(event) => setShares(event.target.value)}
-              placeholder="Shares"
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              disabled={saving}
-            />
-            <Button onClick={addHolding} disabled={loading || saving || !selectedIsin} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add holding
-            </Button>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">The backend calculates the latest price and enforces the selected theme allocation limit.</p>
-        </CardContent>
-      </Card>
+      <AddSecurityForm
+        loading={loading}
+        saving={saving}
+        portfolio={portfolio}
+        themeAssetClasses={themeAssetClasses}
+        selectedAssetClass={selectedAssetClass}
+        setSelectedAssetClass={setSelectedAssetClass}
+        visibleSecurities={visibleSecurities}
+        selectedSecurityId={selectedSecurityId}
+        setSelectedSecurityId={setSelectedSecurityId}
+        selectedSecurity={selectedSecurity}
+        shares={shares}
+        setShares={setShares}
+        estimatedHoldingValue={estimatedHoldingValue}
+        selectedTargetAllocation={selectedTargetAllocation}
+        remainingTargetValue={remainingTargetValue}
+        recommendedShares={recommendedShares}
+        formatAssetClass={formatAssetClass}
+        onAdd={addHolding}
+      />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle>Portfolio allocation</CardTitle>
-            <div className="mt-2 flex gap-2">
-              <Badge variant="outline">Live backend data</Badge>
-              <Badge variant="secondary">{summary.holdingCount} holdings</Badge>
-            </div>
-          </div>
-        </CardHeader>
+      {attachedTheme ? (
+        <AllocationSummary
+          targetAmount={targetAmount}
+          allocationSummary={allocationSummary}
+          allocationMatches={allocationMatches}
+          formatAssetClass={formatAssetClass}
+        />
+      ) : null}
 
-        <CardContent>
-          {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
-          {loading ? <p className="mb-4 text-sm text-muted-foreground">Loading holdings...</p> : null}
-          {!loading && rows.length === 0 ? <p className="mb-4 text-sm text-muted-foreground">No holdings yet. Add an eligible security above.</p> : null}
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-muted text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-3 font-medium">S.No</th>
-                  <th className="px-3 py-3 font-medium">Asset class</th>
-                  <th className="px-3 py-3 font-medium">Name</th>
-                  <th className="px-3 py-3 font-medium">No. of shares</th>
-                  <th className="px-3 py-3 font-medium">Price / share</th>
-                  <th className="px-3 py-3 font-medium">Total value</th>
-                  <th className="px-3 py-3 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr key={row.id} className="border-t border-border align-middle">
-                    <td className="px-3 py-3">{index + 1}</td>
-                    <td className="px-3 py-3">
-                      <input
-                        value={row.assetClass || ''}
-                        readOnly
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 outline-none ring-0 focus:border-foreground"
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        value={row.securityName || row.symbol || ''}
-                        readOnly
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 outline-none ring-0 focus:border-foreground"
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={row.shares || 0}
-                        onChange={(event) => updateShares(row.id, event.target.value)}
-                        disabled={saving}
-                        className="w-24 rounded-md border border-border bg-background px-3 py-2 outline-none ring-0 focus:border-foreground"
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={row.price || 0}
-                        readOnly
-                        className="w-28 rounded-md border border-border bg-background px-3 py-2 outline-none ring-0 focus:border-foreground"
-                      />
-                    </td>
-                    <td className="px-3 py-3 font-medium">₹{Number(row.value || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-red-600 hover:bg-red-500/10 hover:text-red-600"
-                        onClick={() => removeRow(row.id)}
-                        disabled={saving}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button variant="ghost" className="gap-2" onClick={refreshData} disabled={loading || saving}>
-              <RefreshCcw className="h-4 w-4" />
-              Refresh data
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <HoldingsTable
+        rows={rows}
+        summary={summary}
+        targetAmount={targetAmount}
+        saving={saving}
+        loading={loading}
+        error={error}
+        onUpdateShares={updateShares}
+        onRemove={removeRow}
+        onRefresh={refreshData}
+      />
     </div>
   );
 }

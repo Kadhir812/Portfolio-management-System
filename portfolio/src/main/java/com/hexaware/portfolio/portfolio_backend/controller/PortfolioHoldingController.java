@@ -22,7 +22,7 @@ import com.hexaware.portfolio.portfolio_backend.dto.PortfolioValuationResponse;
 import com.hexaware.portfolio.portfolio_backend.dto.RebalanceRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
-import com.hexaware.portfolio.portfolio_backend.service.PortfolioHoldingService;
+import com.hexaware.portfolio.portfolio_backend.service.holdings.PortfolioHoldingService;
 
 @RestController
 @RequestMapping("/api/portfolios/{portfolioId}/holdings")
