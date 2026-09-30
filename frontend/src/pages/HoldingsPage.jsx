@@ -134,15 +134,11 @@ export function HoldingsPage() {
   };
 
   const saveHoldings = async () => {
-    if (attachedTheme && !allocationMatches) {
-      setError('Complete the theme allocation targets before saving holdings. Use the required amount shown for each asset class.');
-      return;
-    }
     try {
       setSaving(true);
       setError('');
       await api.holdings.save(portfolioId);
-      navigate(`/portfolios/${portfolioId}`);
+      navigate('/portfolios');
     } catch (e) {
       setError(e.message || 'Unable to save holdings');
     } finally {
@@ -212,6 +208,8 @@ export function HoldingsPage() {
         </div>
       </div>
 
+      {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
+
       <HoldingMetrics summary={summary} portfolio={portfolio} />
 
       <AddSecurityForm
@@ -250,7 +248,6 @@ export function HoldingsPage() {
         targetAmount={targetAmount}
         saving={saving}
         loading={loading}
-        error={error}
         onUpdateShares={updateShares}
         onRemove={removeRow}
         onRefresh={refreshData}

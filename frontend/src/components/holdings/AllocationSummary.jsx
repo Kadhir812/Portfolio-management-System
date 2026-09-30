@@ -38,8 +38,8 @@ export function AllocationSummary({ targetAmount, allocationSummary, allocationM
         </div>
         <p className={`mt-3 text-sm ${allocationMatches ? 'text-emerald-600' : 'text-amber-600'}`}>
           {allocationMatches
-            ? 'All theme allocations match. You can save the holdings.'
-            : 'Add or adjust holdings until every difference is within 0.50%. Any uninvested amount is counted toward cash.'}
+            ? 'All theme allocation targets currently match.'
+            : 'These are target allocations; you can save holdings before every target is fully allocated. Uninvested money is counted as cash.'}
         </p>
       </CardContent>
     </Card>

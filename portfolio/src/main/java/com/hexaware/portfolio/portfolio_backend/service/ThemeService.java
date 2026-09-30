@@ -6,7 +6,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.hexaware.portfolio.portfolio_backend.dto.ThemeDefinitionResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.ThemeAllocationResponse;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
+import com.hexaware.portfolio.portfolio_backend.entity.ThemeDefinition;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioNotFoundException;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
@@ -32,7 +34,7 @@ public class ThemeService {
     }
 
     public List<ThemeDefinitionResponse> getAllThemes() {
-        return themeRepository.findAll();
+        return themeRepository.findAllByOrderByIdAsc().stream().map(this::toResponse).toList();
     }
 
     public Portfolio attachTheme(Long portfolioId, InvestmentThemes theme) {
@@ -51,7 +53,9 @@ public class ThemeService {
         if (portfolio.getTheme() == null) {
             throw new ThemeNotAttachedException(portfolioId);
         }
-        return themeRepository.findByTheme(portfolio.getTheme());
+        return themeRepository.findByTheme(portfolio.getTheme())
+            .map(this::toResponse)
+            .orElseThrow(() -> new PortfolioValidationException("Investment theme is not configured"));
     }
 
     public void removeTheme(Long portfolioId) {
@@ -69,5 +73,17 @@ public class ThemeService {
                 portfolioId,
                 currentUserService.getCurrentUser().getUsername())
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+    }
+
+    private ThemeDefinitionResponse toResponse(ThemeDefinition theme) {
+        return new ThemeDefinitionResponse(
+                theme.getTheme(),
+                theme.getLabel(),
+                theme.getAllocations().stream()
+                        .map(allocation -> new ThemeAllocationResponse(allocation.getAssetClass(), allocation.getPercentage()))
+                        .toList(),
+                theme.getRisk(),
+                theme.getInvestmentHorizon(),
+                theme.getDescription());
     }
 }

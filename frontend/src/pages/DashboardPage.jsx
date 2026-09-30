@@ -3,6 +3,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Activity, AlertTriangle, ArrowRightLeft, CalendarDays, TrendingUp, Wallet } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge } from '../components/Badge';
+import { BenchmarkPanel } from '../components/BenchmarkPanel';
+import { localDateString } from '../lib/utils';
 
 const money = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(value || 0));
 const label = (value) => (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (x) => x.toUpperCase());
@@ -25,21 +27,28 @@ function monthDates(start, end) {
 export function DashboardPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const dashboardDate = searchParams.get('date');
   const [portfolio, setPortfolio] = useState(null);
   const [theme, setTheme] = useState(null);
   const [valuation, setValuation] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(dashboardDate || localDateString());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
+    setPortfolio(null);
+    setTheme(null);
+    setValuation(null);
+    setError('');
+    setLoading(true);
+    setSelectedDate(dashboardDate || localDateString());
     Promise.all([api.portfolios.get(id), api.themes.get(id).catch(() => null)])
       .then(([p, t]) => { if (active) { setPortfolio(p); setTheme(t); } })
       .catch((e) => { if (active) setError(e.message || 'Unable to load portfolio'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [id]);
+  }, [id, dashboardDate]);
 
   useEffect(() => {
     if (!id || !selectedDate || !portfolio?.holdingsSaved) return;
@@ -95,6 +104,15 @@ export function DashboardPage() {
         <Metric title="Gain / loss" value={`${money(valuation.totalGain)} (${Number.isFinite(gainPercent) ? gainPercent.toFixed(2) : '0.00'}%)`} icon={TrendingUp} />
         <Metric title="Asset classes beyond 5% drift" value={alerts.length} icon={AlertTriangle} tone={alerts.length ? 'danger' : 'good'} />
       </div>
+
+      <BenchmarkPanel
+        portfolioId={id}
+        purchaseDate={valuation.purchaseDate}
+        endDate={valuation.effectiveDate}
+        currency={portfolio?.currency || 'INR'}
+        preferredIndex={portfolio?.benchmark}
+        availableDates={valuation.availableDates}
+      />
 
       {alerts.length > 0 && <Link to={`/portfolios/${id}/rebalance?date=${valuation.requestedDate}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-100">
         <span className="flex items-center gap-2 font-medium"><AlertTriangle className="h-5 w-5" />Allocation drift exceeds 5 percentage points: {alerts.map((a) => label(a.assetClass)).join(', ')}</span><span className="font-semibold">Review rebalance →</span>

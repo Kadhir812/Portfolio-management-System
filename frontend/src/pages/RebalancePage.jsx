@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRightLeft, Save, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { localDateString } from '../lib/utils';
 
 const money = (v) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Number(v || 0));
 const dateLabel = (v) => v ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(`${v}T12:00:00`)) : '';
@@ -13,7 +14,7 @@ export function RebalancePage() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const tradeDate = params.get('date') || new Date().toISOString().slice(0, 10);
+  const tradeDate = params.get('date') || localDateString();
   const [valuation, setValuation] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

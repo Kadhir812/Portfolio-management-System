@@ -67,5 +67,9 @@ export const api = {
 		update: async (portfolioId, holdingId, payload) => (await client.put(`/portfolios/${portfolioId}/holdings/${holdingId}`, payload)).data,
 		remove: async (portfolioId, holdingId) => client.delete(`/portfolios/${portfolioId}/holdings/${holdingId}`),
 		save: async (portfolioId) => (await client.post(`/portfolios/${portfolioId}/holdings/save`)).data
+	},
+	benchmarks: {
+		indexes: async () => (await client.get('/benchmarks')).data,
+		prices: async (index, from, to) => (await client.get(`/benchmarks/${index}/prices`, { params: { from, to } })).data
 	}
 };

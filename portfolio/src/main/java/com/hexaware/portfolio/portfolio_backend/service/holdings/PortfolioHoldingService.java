@@ -195,11 +195,11 @@ public class PortfolioHoldingService {
         }
         List<PortfolioValuationResponse.AllocationDrift> allocation = new ArrayList<>();
         if (p.getTheme() != null) {
-            for (ThemeAllocationResponse target : themes.findByTheme(p.getTheme()).allocations()) {
-                BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.assetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
-                BigDecimal targetPct = BigDecimal.valueOf(target.percentage());
+            for (ThemeAllocation target : themes.findByTheme(p.getTheme()).orElseThrow().getAllocations()) {
+                BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.getAssetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
+                BigDecimal targetPct = BigDecimal.valueOf(target.getPercentage());
                 BigDecimal drift = current.subtract(targetPct).setScale(2, RoundingMode.HALF_UP);
-                allocation.add(new PortfolioValuationResponse.AllocationDrift(target.assetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
+                allocation.add(new PortfolioValuationResponse.AllocationDrift(target.getAssetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
             }
         }
         BigDecimal gains = total.subtract(totalCost).setScale(2, RoundingMode.HALF_UP);

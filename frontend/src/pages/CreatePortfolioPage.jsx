@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { api } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { Badge } from '../components/Badge';
+import { localDateString } from '../lib/utils';
 
 const steps = ['Portfolio Setup', 'Theme Selection', 'Asset Allocation'];
 
@@ -14,7 +15,10 @@ const typeOptions = [
 const currencyOptions = ['INR', 'USD', 'GBP'];
 const exchangeOptions = ['NSE', 'BSE'];
 const rebalanceOptions = ['DAILY', 'WEEKLY', 'MONTHLY'];
-const benchmarkOptions = ['NIFTY50', 'NASDAQ', 'SMP500'];
+const benchmarkOptions = [
+  ['NIFTY50', 'NIFTY 50'], ['SENSEX', 'BSE Sensex'], ['NASDAQ100', 'Nasdaq 100'],
+  ['SMP500', 'S&P 500'], ['FTSE100', 'FTSE 100'], ['DAX', 'DAX'], ['NASDAQ', 'Nasdaq Composite']
+];
 
 export function CreatePortfolioPage() {
   const navigate = useNavigate();
@@ -29,7 +33,7 @@ export function CreatePortfolioPage() {
     exchange: 'NSE',
     rebalanceFrequency: 'MONTHLY',
     amount: 100000,
-    purchaseDate: new Date().toISOString().slice(0, 10)
+    purchaseDate: localDateString()
   });
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [themes, setThemes] = useState([]);
@@ -65,7 +69,7 @@ export function CreatePortfolioPage() {
           exchange: portfolio.exchange || 'NSE',
           rebalanceFrequency: portfolio.rebalanceFrequency || 'MONTHLY',
           amount: portfolio.amount || 0,
-          purchaseDate: portfolio.purchaseDate || new Date().toISOString().slice(0, 10)
+          purchaseDate: portfolio.purchaseDate || localDateString()
         });
         setCreatedPortfolioId(portfolio.id);
         setSelectedTheme(portfolio.theme || null);
@@ -219,8 +223,8 @@ export function CreatePortfolioPage() {
                     onChange={(e) => updateField('benchmark', e.target.value)}
                     className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
                   >
-                    {benchmarkOptions.map((option) => (
-                      <option key={option} value={option}>{option}</option>
+                    {benchmarkOptions.map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
                 </label>
@@ -259,7 +263,7 @@ export function CreatePortfolioPage() {
                 <input
                   type="date"
                   value={form.purchaseDate}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={localDateString()}
                   disabled={isEditing}
                   onChange={(e) => updateField('purchaseDate', e.target.value)}
                   className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
