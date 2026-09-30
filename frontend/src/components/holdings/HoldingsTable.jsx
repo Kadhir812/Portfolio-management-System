@@ -2,7 +2,7 @@ import { RefreshCcw, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-export function HoldingsTable({ rows, summary, targetAmount, saving, loading, error, onUpdateShares, onRemove, onRefresh }) {
+export function HoldingsTable({ rows, summary, targetAmount, saving, loading, onUpdateShares, onRemove, onRefresh }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -15,7 +15,6 @@ export function HoldingsTable({ rows, summary, targetAmount, saving, loading, er
         </div>
       </CardHeader>
       <CardContent>
-        {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
         {loading ? <p className="mb-4 text-sm text-muted-foreground">Loading holdings...</p> : null}
         {!loading && rows.length === 0 ? <p className="mb-4 text-sm text-muted-foreground">No holdings yet. Add an eligible security above.</p> : null}
         <div className="overflow-hidden rounded-xl border border-border">

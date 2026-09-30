@@ -74,11 +74,21 @@ public class HoldingSecurityService {
     }
 
     public BigDecimal priceValue(DailyPrice price) {
-        BigDecimal value = price.getValuationPrice() != null ? price.getValuationPrice()
-                : price.getClosePrice() != null ? price.getClosePrice()
-                : price.getNav() != null ? price.getNav() : price.getSpotPrice();
-        if (value == null || value.signum() <= 0) throw new PortfolioValidationException("Historical price is missing or invalid");
-        return value;
+        if (price == null) {
+            throw new PortfolioValidationException("Historical price is missing or invalid");
+        }
+        BigDecimal[] candidates = {
+                price.getValuationPrice(),
+                price.getClosePrice(),
+                price.getNav(),
+                price.getSpotPrice()
+        };
+        for (BigDecimal candidate : candidates) {
+            if (candidate != null && candidate.signum() > 0) {
+                return candidate;
+            }
+        }
+        throw new PortfolioValidationException("Historical price is missing or invalid");
     }
 
     public Long tradeSecurityId(PortfolioTrade trade) {
