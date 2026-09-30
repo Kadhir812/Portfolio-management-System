@@ -23,6 +23,18 @@ function monthlyCloses(rows) {
   return [...byMonth.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+async function loadPortfolioValuations(portfolioId, dates) {
+  const valuations = [];
+  const batchSize = 4;
+  for (let offset = 0; offset < dates.length; offset += batchSize) {
+    const batch = await Promise.all(
+      dates.slice(offset, offset + batchSize).map((date) => api.holdings.valuation(portfolioId, date))
+    );
+    valuations.push(...batch);
+  }
+  return valuations;
+}
+
 function indexed(values) {
   const first = values[0];
   return values.map((value) => first > 0 ? (value / first) * 100 : 100);
@@ -86,6 +98,13 @@ export function BenchmarkPanel({ portfolioId, purchaseDate, endDate, currency, p
 
   useEffect(() => {
     if (!portfolioId || !purchaseDate || !endDate || !availableDates?.length) return;
+    if (endDate < purchaseDate) {
+      setIndexRows([]);
+      setPortfolioRows([]);
+      setError('Benchmark comparison is unavailable because no valuation data exists on or after the purchase date.');
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
     setError('');
@@ -98,7 +117,7 @@ export function BenchmarkPanel({ portfolioId, purchaseDate, endDate, currency, p
     const valuationDates = [...monthEnds.values()].sort().slice(-25);
     Promise.all([
       api.benchmarks.prices(index, purchaseDate, endDate),
-      Promise.all(valuationDates.map((date) => api.holdings.valuation(portfolioId, date)))
+      loadPortfolioValuations(portfolioId, valuationDates)
     ]).then(([comparison, valuations]) => {
       if (!active) return;
       setIndexRows(monthlyCloses((comparison.prices || []).map((price) => ({ date: price.date, close: Number(price.close) }))));

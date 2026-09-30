@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Button } from '../components/ui/button';
-import { HoldingMetrics } from '../components/holdings/HoldingMetrics';
-import { AddSecurityForm } from '../components/holdings/AddSecurityForm';
-import { AllocationSummary } from '../components/holdings/AllocationSummary';
-import { HoldingsTable } from '../components/holdings/HoldingsTable';
-import { localDateString } from '../lib/utils';
-
-const eligiblePriceDate = (portfolio) => portfolio.holdingsSaved
-  ? localDateString()
-  : portfolio.purchaseDate || localDateString();
+import { getEqualHoldingTargets } from '../lib/utils';
+import { HoldingsPageHeader } from './holdings/HoldingsPageHeader';
+import { HoldingsWorkspace } from './holdings/HoldingsWorkspace';
+import { eligiblePriceDate, formatAssetClass } from './holdings/holdingsUtils';
 
 export function HoldingsPage() {
   const { id: portfolioId } = useParams();
@@ -162,8 +155,8 @@ export function HoldingsPage() {
     : investableSecurities;
   const selectedSecurity = investableSecurities.find((security) => String(security.securityId) === selectedSecurityId);
   const estimatedHoldingValue = Number(selectedSecurity?.latestPrice || 0) * Number(shares || 0);
-  const formatAssetClass = (assetClass) => assetClass.replaceAll('_', ' ');
   const targetAmount = Number(portfolio?.amount || 0);
+  const holdingsWithTargets = getEqualHoldingTargets(rows, attachedTheme?.allocations || [], targetAmount);
   const currentAllocationByClass = rows.reduce((totals, row) => {
     totals[row.assetClass] = (totals[row.assetClass] || 0) + Number(row.value || 0);
     return totals;
@@ -173,11 +166,24 @@ export function HoldingsPage() {
   const selectedTargetAllocation = attachedTheme?.allocations?.find(
     (allocation) => allocation.assetClass === selectedSecurity?.assetClass
   );
-  const selectedClassValue = currentAllocationByClass[selectedSecurity?.assetClass] || 0;
-  const selectedTargetValue = selectedTargetAllocation
+  const selectedExistingHolding = rows.find((row) => Number(row.securityId) === Number(selectedSecurity?.securityId));
+  const selectedClassHoldingCount = rows.filter((row) => row.assetClass === selectedSecurity?.assetClass).length
+    + (selectedExistingHolding ? 0 : 1);
+  const selectedClassTargetValue = selectedTargetAllocation
     ? targetAmount * Number(selectedTargetAllocation.percentage) / 100
     : 0;
-  const remainingTargetValue = Math.max(selectedTargetValue - selectedClassValue, 0);
+  const selectedTargetValue = selectedTargetAllocation && selectedClassHoldingCount > 0
+    ? selectedClassTargetValue / selectedClassHoldingCount
+    : 0;
+  const selectedTargetPercentage = targetAmount > 0 ? selectedTargetValue / targetAmount * 100 : 0;
+  const remainingClassTargetValue = Math.max(
+    selectedClassTargetValue - (currentAllocationByClass[selectedSecurity?.assetClass] || 0),
+    0
+  );
+  const remainingTargetValue = Math.min(
+    Math.max(selectedTargetValue - Number(selectedExistingHolding?.value || 0), 0),
+    remainingClassTargetValue
+  );
   const recommendedShares = Number(selectedSecurity?.latestPrice || 0) > 0
     ? remainingTargetValue / Number(selectedSecurity.latestPrice)
     : 0;
@@ -198,66 +204,48 @@ export function HoldingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Asset management</p>
-          <h2 className="mt-1 text-3xl font-bold">Holdings</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/portfolios" className="inline-flex items-center gap-2 rounded-md border border-input px-4 py-2 text-sm hover:bg-accent">
-            <ArrowLeft className="h-4 w-4" />
-            Portfolios
-          </Link>
-          <Button className="gap-2" onClick={saveHoldings} disabled={!portfolioId || loading || saving}>
-            <Save className="h-4 w-4" />
-            Save holdings
-          </Button>
-        </div>
-      </div>
-
-      {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
-
-      <HoldingMetrics summary={summary} portfolio={portfolio} />
-
-      <AddSecurityForm
-        loading={loading}
-        saving={saving}
-        portfolio={portfolio}
-        themeAssetClasses={themeAssetClasses}
-        selectedAssetClass={selectedAssetClass}
-        setSelectedAssetClass={setSelectedAssetClass}
-        visibleSecurities={visibleSecurities}
-        selectedSecurityId={selectedSecurityId}
-        setSelectedSecurityId={setSelectedSecurityId}
-        selectedSecurity={selectedSecurity}
-        shares={shares}
-        setShares={setShares}
-        estimatedHoldingValue={estimatedHoldingValue}
-        selectedTargetAllocation={selectedTargetAllocation}
-        remainingTargetValue={remainingTargetValue}
-        recommendedShares={recommendedShares}
-        formatAssetClass={formatAssetClass}
-        onAdd={addHolding}
-      />
-
-      {attachedTheme ? (
-        <AllocationSummary
-          targetAmount={targetAmount}
-          allocationSummary={allocationSummary}
-          allocationMatches={allocationMatches}
-          formatAssetClass={formatAssetClass}
-        />
-      ) : null}
-
-      <HoldingsTable
-        rows={rows}
+      <HoldingsPageHeader portfolioId={portfolioId} loading={loading} saving={saving} onSave={saveHoldings} />
+      <HoldingsWorkspace
+        error={error}
         summary={summary}
+        portfolio={portfolio}
+        hasTheme={Boolean(attachedTheme)}
         targetAmount={targetAmount}
-        saving={saving}
-        loading={loading}
-        onUpdateShares={updateShares}
-        onRemove={removeRow}
-        onRefresh={refreshData}
+        addSecurityProps={{
+          loading,
+          saving,
+          portfolio,
+          themeAssetClasses,
+          selectedAssetClass,
+          setSelectedAssetClass,
+          visibleSecurities,
+          selectedSecurityId,
+          setSelectedSecurityId,
+          selectedSecurity,
+          shares,
+          setShares,
+          estimatedHoldingValue,
+          selectedTargetAllocation,
+          selectedTargetValue,
+          selectedTargetPercentage,
+          remainingTargetValue,
+          recommendedShares,
+          formatAssetClass,
+          onAdd: addHolding
+        }}
+        allocationSummary={allocationSummary}
+        allocationMatches={allocationMatches}
+        formatAssetClass={formatAssetClass}
+        holdingsTableProps={{
+          rows: holdingsWithTargets,
+          summary,
+          targetAmount,
+          saving,
+          loading,
+          onUpdateShares: updateShares,
+          onRemove: removeRow,
+          onRefresh: refreshData
+        }}
       />
     </div>
   );

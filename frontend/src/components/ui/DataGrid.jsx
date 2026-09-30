@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import {
   ClientSideRowModelModule,
+  CellStyleModule,
   ModuleRegistry,
   NumberEditorModule,
   NumberFilterModule,
@@ -14,6 +15,7 @@ import { AgGridReact } from 'ag-grid-react';
 
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
+  CellStyleModule,
   RowApiModule,
   RowAutoHeightModule,
   RowSelectionModule,

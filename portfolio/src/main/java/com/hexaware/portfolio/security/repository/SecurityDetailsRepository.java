@@ -16,6 +16,10 @@ public interface SecurityDetailsRepository extends JpaRepository<SecurityDetails
 
     Optional<SecurityDetails> findBySymbol(String symbol);
 
+    Optional<SecurityDetails> findFirstBySymbolIgnoreCaseOrderBySecurityIdAsc(String symbol);
+
+    Optional<SecurityDetails> findByExchangeIgnoreCaseAndIsinIgnoreCase(String exchange, String isin);
+
     Optional<SecurityDetails> findBySymbolAndSeries(String symbol, String series);
 
     List<SecurityDetails> findAllByAssetTypeIn(Collection<AssetType> assetTypes);

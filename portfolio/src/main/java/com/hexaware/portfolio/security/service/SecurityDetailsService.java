@@ -24,6 +24,14 @@ public class SecurityDetailsService {
         return repo.findBySymbol(symbol);
     }
 
+    public Optional<SecurityDetails> findFirstBySymbol(String symbol) {
+        return repo.findFirstBySymbolIgnoreCaseOrderBySecurityIdAsc(symbol);
+    }
+
+    public Optional<SecurityDetails> findByExchangeAndIsin(String exchange, String isin) {
+        return repo.findByExchangeIgnoreCaseAndIsinIgnoreCase(exchange, isin);
+    }
+
     public Optional<SecurityDetails> getBySymbolAndSeries(String symbol, String series) {
         return repo.findBySymbolAndSeries(symbol, series);
     }

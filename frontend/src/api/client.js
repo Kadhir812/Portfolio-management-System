@@ -31,8 +31,11 @@ client.interceptors.response.use(
 			|| error.response?.data
 			|| error.message;
 		console.error('API request failed', {
+			code: error.code,
+			message: error.message,
 			status: error.response?.status,
 			url: error.config?.url,
+			params: error.config?.params,
 			response: error.response?.data
 		});
 		return Promise.reject(new Error(typeof message === 'string' ? message : 'Request failed'));
@@ -56,6 +59,10 @@ export const api = {
 		get: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/theme`)).data,
 		attach: async (portfolioId, theme) => (await client.put(`/portfolios/${portfolioId}/theme`, { theme })).data,
 		remove: async (portfolioId) => client.delete(`/portfolios/${portfolioId}/theme`)
+	},
+	securities: {
+		list: async () => (await client.get('/securities')).data,
+		search: async (params) => (await client.get('/securities/search', { params })).data
 	},
 	holdings: {
 		list: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/holdings`)).data,

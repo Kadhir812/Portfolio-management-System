@@ -1,11 +1,11 @@
 import { lazy, Suspense, useMemo } from 'react';
 import { RefreshCcw, Trash2 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
-const DataGrid = lazy(() => import('../ui/DataGrid').then((module) => ({ default: module.DataGrid })));
+const DataGrid = lazy(() => import('../../components/ui/DataGrid').then((module) => ({ default: module.DataGrid })));
 const money = (value) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-const assetLabel = (value) => (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+const assetLabel = (value) => value === 'STOCKS' ? 'Equity' : (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export function HoldingsTable({ rows, summary, targetAmount, saving, loading, error, onUpdateShares, onRemove, onRefresh }) {
   const columnDefs = useMemo(() => [
@@ -63,6 +63,26 @@ export function HoldingsTable({ rows, summary, targetAmount, saving, loading, er
       sortingOrder: ['asc', 'desc'],
       minWidth: 115,
       valueFormatter: ({ value }) => money(value)
+    },
+    {
+      headerName: 'Model target',
+      sortable: true,
+      minWidth: 150,
+      valueGetter: ({ data }) => data?.targetAmount,
+      cellRenderer: ({ data }) => data?.targetAmount == null ? '—' : (
+        <div className="flex h-full flex-col justify-center">
+          <span>{money(data.targetAmount)}</span>
+          <span className="text-xs text-muted-foreground">{Number(data.targetPercentage).toFixed(2)}% of portfolio</span>
+        </div>
+      )
+    },
+    {
+      headerName: 'Difference',
+      field: 'difference',
+      sortable: true,
+      minWidth: 120,
+      valueFormatter: ({ value }) => value == null ? '—' : `${value > 0 ? '+' : ''}${money(value)}`,
+      cellClass: ({ value }) => value > 0 ? 'text-amber-600' : value < 0 ? 'text-sky-600' : 'text-emerald-600'
     },
     {
       headerName: 'Portfolio %',

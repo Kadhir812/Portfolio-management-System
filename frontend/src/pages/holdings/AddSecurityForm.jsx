@@ -1,6 +1,6 @@
 import { Calculator, Plus } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export function AddSecurityForm({
   loading,
@@ -17,6 +17,8 @@ export function AddSecurityForm({
   setShares,
   estimatedHoldingValue,
   selectedTargetAllocation,
+  selectedTargetValue,
+  selectedTargetPercentage,
   remainingTargetValue,
   recommendedShares,
   formatAssetClass,
@@ -68,7 +70,7 @@ export function AddSecurityForm({
             <p className="mt-1 text-xs text-muted-foreground">Value: ₹{estimatedHoldingValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
             {portfolio?.type === 'WEIGHTAGE' && selectedTargetAllocation ? (
               <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <p>Target: {selectedTargetAllocation.percentage}% · Remaining: ₹{remainingTargetValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                <p>Per-holding target: ₹{selectedTargetValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ({selectedTargetPercentage.toFixed(2)}%) · Remaining: ₹{remainingTargetValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
                 <button
                   type="button"
                   onClick={() => setShares(recommendedShares.toFixed(4))}

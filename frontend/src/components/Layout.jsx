@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { BriefcaseBusiness, LayoutDashboard, BellRing, LogOut } from 'lucide-react';
+import { BriefcaseBusiness, LayoutDashboard, BellRing, Database, LogOut } from 'lucide-react';
 import { Card } from './ui/card';
 
 const navItems = [
   { label: 'Portfolios', to: '/portfolios', icon: BriefcaseBusiness },
+  { label: 'Securities', to: '/securities', icon: Database },
   { label: 'Dashboard', to: '/portfolios/overview', icon: LayoutDashboard },
   { label: 'Alerts', to: '/alerts', icon: BellRing }
 ];

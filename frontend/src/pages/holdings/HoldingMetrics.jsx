@@ -1,4 +1,4 @@
-import { Card } from '../ui/card';
+import { Card } from '../../components/ui/card';
 
 export function HoldingMetrics({ summary, portfolio }) {
   const residualCash = Math.max(Number(portfolio?.amount || 0) - Number(summary.totalValue || 0), 0);

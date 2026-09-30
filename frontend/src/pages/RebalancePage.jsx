@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ArrowRightLeft, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, Save, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -13,6 +13,9 @@ const driftLabel = (value) => {
   const rounded = Number(value.toFixed(1));
   return `${rounded > 0 ? '+' : ''}${(Object.is(rounded, -0) ? 0 : rounded).toFixed(1)} pp`;
 };
+const driftTone = (value) => Math.abs(value) > 5
+  ? 'bg-red-500/10 text-red-700 dark:text-red-300'
+  : 'bg-green-500/10 text-green-700 dark:text-green-300';
 
 export function RebalancePage() {
   const { id } = useParams();
@@ -20,14 +23,18 @@ export function RebalancePage() {
   const navigate = useNavigate();
   const tradeDate = params.get('date') || localDateString();
   const [valuation, setValuation] = useState(null);
+  const [portfolioAmount, setPortfolioAmount] = useState(0);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.holdings.valuation(id, tradeDate)
-      .then((data) => setValuation(data))
+    Promise.all([api.holdings.valuation(id, tradeDate), api.portfolios.get(id)])
+      .then(([data, portfolio]) => {
+        setValuation(data);
+        setPortfolioAmount(Number(portfolio.amount || 0));
+      })
       .catch((e) => setError(e.message || 'Unable to load rebalance details'))
       .finally(() => setLoading(false));
   }, [id, tradeDate]);
@@ -63,6 +70,7 @@ export function RebalancePage() {
     });
     const currentCash = Math.max(Number(valuation.totalValue) - investedValue, 0);
     valuesByClass.set('CASH', currentCash);
+    const currentValuesByClass = new Map(valuesByClass);
     let sellValue = 0;
     orders.forEach((order) => {
       const tradeValue = order.signedShares * order.unitPrice;
@@ -79,13 +87,24 @@ export function RebalancePage() {
       projectedCash,
       projectedTotal,
       allocations: valuation.allocations.map((allocation) => {
+        const targetPercentage = Number(allocation.targetPercentage);
+        const currentValue = currentValuesByClass.get(allocation.assetClass) || 0;
         const projectedValue = valuesByClass.get(allocation.assetClass) || 0;
         const projectedPercentage = projectedTotal > 0 ? projectedValue / projectedTotal * 100 : 0;
-        const drift = projectedPercentage - Number(allocation.targetPercentage);
-        return { ...allocation, projectedPercentage, projectedDrift: drift };
+        const currentTargetValue = Number(valuation.totalValue) * targetPercentage / 100;
+        const drift = projectedPercentage - targetPercentage;
+        return {
+          ...allocation,
+          currentValue,
+          initialTargetValue: portfolioAmount * targetPercentage / 100,
+          addValue: Math.max(currentTargetValue - currentValue, 0),
+          projectedValue,
+          projectedPercentage,
+          projectedDrift: drift
+        };
       })
     };
-  }, [valuation, orders, orderTotals]);
+  }, [valuation, orders, orderTotals, portfolioAmount]);
 
   const submit = async () => {
     const trades = orders.filter((order) => Number(order.signedShares) < 0).map(({ securityId, isin, signedShares }) => ({ securityId, isin, signedShares: Number(signedShares) }));
@@ -114,7 +133,54 @@ export function RebalancePage() {
         <Card className="p-5"><p className="text-sm text-muted-foreground">Estimated sale proceeds</p><p className="mt-2 text-2xl font-bold">{money(projection.sellValue)}</p><p className="text-xs text-muted-foreground">Only sell orders are applied here.</p></Card>
       </div>
       {projection.projectedCash < -0.005 && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">Proposed buys exceed estimated cash by {money(-projection.projectedCash)}.</div>}
-      <Card><CardHeader><CardTitle>Allocation: current vs after proposed sells</CardTitle><p className="text-sm text-muted-foreground">After shows the effect of these sells only. Sale proceeds stay in cash; buy orders are not included.</p></CardHeader><CardContent><div className="grid gap-3 md:grid-cols-2">{projection.allocations.map((row) => { const beforeDrift = Number(row.currentPercentage) - Number(row.targetPercentage); return <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border p-3" key={row.assetClass}><div className="min-w-0"><p className="font-medium">{name(row.assetClass)}</p><p className="mt-2 text-[10px] font-medium uppercase text-muted-foreground">Before</p><p className="font-semibold">{Number(row.currentPercentage).toFixed(1)}%</p><p className="text-xs text-muted-foreground">{driftLabel(beforeDrift)} vs target</p></div><ArrowRight className="h-4 w-4 text-muted-foreground" /><div className="min-w-0"><p className="text-[10px] font-medium uppercase text-muted-foreground">After sells</p><p className="font-semibold">{row.projectedPercentage.toFixed(1)}%</p><p className="text-xs text-muted-foreground">{driftLabel(row.projectedDrift)} vs target</p></div><div className="text-right"><p className="text-[10px] text-muted-foreground">Target</p><p className="text-sm font-medium">{Number(row.targetPercentage).toFixed(1)}%</p></div></div>; })}</div></CardContent></Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Allocation: current, target, and after sells</CardTitle>
+          <p className="text-sm text-muted-foreground">Initial target uses the original investment. Add value estimates what is needed to meet the theme percentage at today’s portfolio value. After includes proposed sells only; proceeds remain as cash.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[960px] text-left text-sm">
+              <thead className="bg-muted text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-3 font-medium">Asset class</th>
+                  <th className="px-3 py-3 text-right font-medium">Theme target · initial</th>
+                  <th className="px-3 py-3 text-right font-medium">Current</th>
+                  <th className="px-3 py-3 text-right font-medium">Add value</th>
+                  <th className="px-3 py-3 text-right font-medium">After proposed sells</th>
+                  <th className="px-3 py-3 text-right font-medium">Difference now</th>
+                  <th className="px-3 py-3 text-right font-medium">Difference after</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projection.allocations.map((row) => {
+                  const beforeDrift = Number(row.currentPercentage) - Number(row.targetPercentage);
+                  return (
+                    <tr key={row.assetClass} className="border-t border-border">
+                      <td className="px-3 py-3 font-medium">{name(row.assetClass)}</td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="font-medium">{Number(row.targetPercentage).toFixed(1)}%</div>
+                        <div className="text-xs text-muted-foreground">{money(row.initialTargetValue)} initial</div>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <div>{Number(row.currentPercentage).toFixed(1)}%</div>
+                        <div className="text-xs text-muted-foreground">{money(row.currentValue)}</div>
+                      </td>
+                      <td className="px-3 py-3 text-right font-medium">{row.addValue > 0 ? money(row.addValue) : 'None'}</td>
+                      <td className="px-3 py-3 text-right">
+                        <div>{row.projectedPercentage.toFixed(1)}%</div>
+                        <div className="text-xs text-muted-foreground">{money(row.projectedValue)}</div>
+                      </td>
+                      <td className="px-3 py-3 text-right"><span className={`inline-flex min-w-20 justify-center rounded-full px-2 py-1 text-xs font-semibold ${driftTone(beforeDrift)}`}>{driftLabel(beforeDrift)}</span></td>
+                      <td className="px-3 py-3 text-right"><span className={`inline-flex min-w-20 justify-center rounded-full px-2 py-1 text-xs font-semibold ${driftTone(row.projectedDrift)}`}>{driftLabel(row.projectedDrift)}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
       <Card><CardHeader><CardTitle>Proposed trades</CardTitle></CardHeader><CardContent>
         <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-muted-foreground"><tr><th className="py-2">Security</th><th>Asset class</th><th>Price</th><th>Shares to sell</th><th>Estimated proceeds</th><th /></tr></thead><tbody>
           {orders.map((order, index) => <tr key={order.securityId} className="border-t border-border"><td className="py-3 font-medium">{order.symbol}</td><td>{name(order.assetClass)}</td><td>{money(order.unitPrice)}</td><td><input type="number" min="0" step="0.0001" value={Math.abs(Number(order.signedShares.toFixed(4)))} onChange={(event) => setOrders((current) => current.map((item, row) => row === index ? { ...item, signedShares: -Math.max(Number(event.target.value) || 0, 0) } : item))} className="w-36 rounded-md border border-input bg-background px-2 py-1.5" /></td><td>{money(Math.abs(order.signedShares * order.unitPrice))}</td><td><button type="button" aria-label={`Remove ${order.symbol}`} onClick={() => setOrders((current) => current.filter((_, row) => row !== index))} className="text-red-600"><Trash2 className="h-4 w-4" /></button></td></tr>)}
