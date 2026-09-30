@@ -64,14 +64,13 @@ public class Portfolio {
 
     private Double amount;
 
+    @Enumerated(EnumType.STRING)
+    private InvestmentThemes theme;  
+             
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
 
     private boolean holdingsSaved;
-
-    // ----- attached ONLY in Stage 2 -----
-    @Enumerated(EnumType.STRING)
-    private InvestmentThemes theme;           // null until theme saved
 
     private Instant createdAt;
     private Instant updatedAt;

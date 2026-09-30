@@ -54,6 +54,12 @@ FROM security_details s
 WHERE s.symbol = 'RELIANCE'
   AND NOT EXISTS (SELECT 1 FROM daily_prices p WHERE p.security_id = s.security_id AND p.trade_date = '2026-09-29');
 
+INSERT INTO daily_prices (security_id, trade_date, close_price, valuation_price)
+SELECT security_id, '2024-09-29', 1000.000000, 1000.000000
+FROM security_details s
+WHERE s.symbol = 'RELIANCE'
+  AND NOT EXISTS (SELECT 1 FROM daily_prices p WHERE p.security_id = s.security_id AND p.trade_date = '2024-09-29');
+
 INSERT INTO daily_prices
     (security_id, trade_date, open_price, high_price, low_price, close_price, prev_close, last_price, volume, nav, spot_price, valuation_price)
 SELECT security_id, '2026-09-29', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 86.250000, NULL, 86.250000

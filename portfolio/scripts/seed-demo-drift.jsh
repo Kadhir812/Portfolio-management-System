@@ -17,7 +17,7 @@ connection.setAutoCommit(false);
 var statementsRun = 0;
 try {
     var seedFiles = List.of(
-            "Portfolio-management-System/portfolio/src/main/resources/demo-drift-one-year.sql",
+            "Portfolio-management-System/portfolio/src/main/resources/demo-drift-two-year.sql",
             "Portfolio-management-System/portfolio/src/main/resources/demo-drift-portfolio.sql");
     for (var seedFile : seedFiles) {
         var seed = Files.readString(Path.of(seedFile));

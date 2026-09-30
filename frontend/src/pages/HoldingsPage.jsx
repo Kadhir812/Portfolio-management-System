@@ -106,15 +106,17 @@ export function HoldingsPage() {
   };
 
   const updateShares = async (holdingId, value) => {
-    if (Number(value) <= 0) return;
+    if (Number(value) <= 0) return false;
 
     try {
       setSaving(true);
       setError('');
       await api.holdings.update(portfolioId, holdingId, { shares: Number(value) });
       await refreshData();
+      return true;
     } catch (e) {
       setError(e.message || 'Unable to update holding');
+      return false;
     } finally {
       setSaving(false);
     }

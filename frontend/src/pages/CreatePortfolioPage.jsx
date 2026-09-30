@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Filter } from 'lucide-react';
 import { api } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { Badge } from '../components/Badge';
-import { localDateString } from '../lib/utils';
+
+const DataGrid = lazy(() => import('../components/ui/DataGrid').then((module) => ({ default: module.DataGrid })));
 
 const steps = ['Portfolio Setup', 'Theme Selection', 'Asset Allocation'];
 
@@ -15,10 +16,72 @@ const typeOptions = [
 const currencyOptions = ['INR', 'USD', 'GBP'];
 const exchangeOptions = ['NSE', 'BSE'];
 const rebalanceOptions = ['DAILY', 'WEEKLY', 'MONTHLY'];
-const benchmarkOptions = [
-  ['NIFTY50', 'NIFTY 50'], ['SENSEX', 'BSE Sensex'], ['NASDAQ100', 'Nasdaq 100'],
-  ['SMP500', 'S&P 500'], ['FTSE100', 'FTSE 100'], ['DAX', 'DAX'], ['NASDAQ', 'Nasdaq Composite']
-];
+const benchmarkOptions = ['NIFTY50', 'NASDAQ', 'SMP500'];
+const themeRiskOrder = {
+  CONSERVATIVE: 0,
+  MODERATELY_CONSERVATIVE: 1,
+  MODERATELY_AGGRESSIVE: 2,
+  AGGRESSIVE: 3,
+  VERY_AGGRESSIVE: 4
+};
+const riskLevels = ['Low', 'Moderate', 'High', 'Very High'];
+const investmentDurations = ['Short Term', 'Medium Term', 'Long Term'];
+
+const RiskCycleHeader = (params) => {
+  const [activeRiskIndex, setActiveRiskIndex] = useState(-1);
+  const activeRisk = activeRiskIndex >= 0 ? riskLevels[activeRiskIndex] : null;
+
+  const cycleRiskFilter = async () => {
+    const nextIndex = activeRiskIndex + 1;
+    const nextRisk = riskLevels[nextIndex] || null;
+    await params.api.setColumnFilterModel('risk', nextRisk
+      ? { filterType: 'text', type: 'equals', filter: nextRisk }
+      : null);
+    params.api.onFilterChanged();
+    setActiveRiskIndex(nextRisk ? nextIndex : -1);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={cycleRiskFilter}
+      aria-label={`Filter themes by risk. Current filter: ${activeRisk || 'All'}. Click to cycle.`}
+      className="flex h-full w-full items-center gap-2 text-left font-semibold"
+    >
+      <Filter className="h-3.5 w-3.5 shrink-0 text-sky-700" />
+      <span>Risk</span>
+      <span className="truncate text-xs font-normal text-muted-foreground">{activeRisk || 'All'}</span>
+    </button>
+  );
+}
+
+const InvestmentDurationHeader = (params) => {
+  const [activeDurationIndex, setActiveDurationIndex] = useState(-1);
+  const activeDuration = activeDurationIndex >= 0 ? investmentDurations[activeDurationIndex] : null;
+
+  const cycleDurationFilter = async () => {
+    const nextIndex = activeDurationIndex + 1;
+    const nextDuration = investmentDurations[nextIndex] || null;
+    await params.api.setColumnFilterModel('investmentHorizon', nextDuration
+      ? { filterType: 'text', type: 'equals', filter: nextDuration }
+      : null);
+    params.api.onFilterChanged();
+    setActiveDurationIndex(nextDuration ? nextIndex : -1);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={cycleDurationFilter}
+      aria-label={`Filter themes by investment duration. Current filter: ${activeDuration || 'All'}. Click to cycle.`}
+      className="flex h-full w-full items-center gap-2 text-left font-semibold"
+    >
+      <Filter className="h-3.5 w-3.5 shrink-0 text-sky-700" />
+      <span>Investment duration</span>
+      <span className="truncate text-xs font-normal text-muted-foreground">{activeDuration || 'All'}</span>
+    </button>
+  );
+};
 
 export function CreatePortfolioPage() {
   const navigate = useNavigate();
@@ -39,6 +102,8 @@ export function CreatePortfolioPage() {
   const [themes, setThemes] = useState([]);
   const [loadingThemes, setLoadingThemes] = useState(true);
   const [createdPortfolioId, setCreatedPortfolioId] = useState(null);
+  const [holdingsSaved, setHoldingsSaved] = useState(false);
+  const [portfolioLoaded, setPortfolioLoaded] = useState(!isEditing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -73,14 +138,62 @@ export function CreatePortfolioPage() {
         });
         setCreatedPortfolioId(portfolio.id);
         setSelectedTheme(portfolio.theme || null);
+        setHoldingsSaved(Boolean(portfolio.holdingsSaved));
+        setPortfolioLoaded(true);
       })
-      .catch((e) => setError(e.message || 'Unable to load portfolio'));
+      .catch((e) => {
+        setError(e.message || 'Unable to load portfolio');
+        setPortfolioLoaded(true);
+      });
   }, [editingPortfolioId]);
 
   const selectedThemeData = useMemo(
     () => themes.find((item) => item.theme === selectedTheme) || null,
     [selectedTheme, themes]
   );
+  const themeColumns = useMemo(() => [
+    {
+      headerName: 'Theme',
+      field: 'label',
+      sort: 'asc',
+      sortingOrder: ['asc', 'desc'],
+      sortable: true,
+      comparator: (_valueA, _valueB, nodeA, nodeB) =>
+        (themeRiskOrder[nodeA.data.theme] ?? Number.MAX_SAFE_INTEGER)
+        - (themeRiskOrder[nodeB.data.theme] ?? Number.MAX_SAFE_INTEGER),
+      flex: 1,
+      minWidth: 170
+    },
+    {
+      headerName: 'Asset allocation',
+      field: 'allocations',
+      sortable: false,
+      filter: false,
+      valueFormatter: ({ value }) => (value || [])
+        .map((allocation) => `${allocation.assetClass.replaceAll('_', ' ')} ${allocation.percentage}%`)
+        .join(' · '),
+      flex: 2,
+      minWidth: 300,
+      wrapText: true,
+      autoHeight: true
+    },
+    {
+      headerName: 'Risk',
+      field: 'risk',
+      sortable: false,
+      filter: 'agTextColumnFilter',
+      headerComponent: RiskCycleHeader,
+      minWidth: 130
+    },
+    {
+      headerName: 'Investment duration',
+      field: 'investmentHorizon',
+      sortable: true,
+      filter: 'agTextColumnFilter',
+      headerComponent: InvestmentDurationHeader,
+      minWidth: 180
+    }
+  ], []);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -96,6 +209,14 @@ export function CreatePortfolioPage() {
 
       if (isEditing) {
         await api.portfolios.update(editingPortfolioId, payload);
+        if (!selectedTheme) {
+          setCurrentStep(1);
+          return;
+        }
+        if (!holdingsSaved) {
+          setCurrentStep(2);
+          return;
+        }
         navigate(`/portfolios/${editingPortfolioId}`);
         return;
       }
@@ -298,7 +419,7 @@ export function CreatePortfolioPage() {
             <button
               type="button"
               onClick={handleCreateBasePortfolio}
-              disabled={saving || !form.name.trim()}
+              disabled={saving || !form.name.trim() || !portfolioLoaded}
               className="inline-flex items-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? (isEditing ? 'Updating portfolio...' : 'Saving portfolio...') : (isEditing ? 'Update portfolio' : 'Save portfolio')}
@@ -310,43 +431,18 @@ export function CreatePortfolioPage() {
 
       {currentStep === 1 ? (
         <div className="space-y-6">
-          <div className="grid gap-5 xl:grid-cols-2">
-            {loadingThemes ? <p className="text-slate-300">Loading themes...</p> : null}
-            {themes.map((theme) => (
-              <button
-                key={theme.theme}
-                type="button"
-                onClick={() => setSelectedTheme(theme.theme)}
-                aria-pressed={selectedTheme === theme.theme}
-                className={`rounded-[28px] border p-5 text-left transition ${
-                  selectedTheme === theme.theme
-                    ? 'border-brand-500 bg-brand-500/10 shadow-soft'
-                    : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">{theme.label}</h3>
-                    <p className="text-sm text-slate-400">{theme.investmentHorizon}</p>
-                  </div>
-                  <Badge tone="info">{theme.risk}</Badge>
-                </div>
-
-                <div className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
-                  {selectedTheme === theme.theme ? 'Selected theme' : 'Select theme'}
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  {theme.allocations.map((allocation) => (
-                    <div key={allocation.assetClass} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
-                      <span>{allocation.assetClass.replace('_', ' ')}</span>
-                      <span className="font-medium text-white">{allocation.percentage}%</span>
-                    </div>
-                  ))}
-                </div>
-              </button>
-            ))}
-          </div>
+          {selectedThemeData && <p className="text-sm text-slate-300">Selected: <span className="font-semibold text-white">{selectedThemeData.label}</span></p>}
+          <Suspense fallback={<div className="rounded-lg border border-slate-700 bg-white p-5 text-sm text-slate-600">Loading theme grid…</div>}>
+            <DataGrid
+              rowData={themes}
+              columnDefs={themeColumns}
+              getRowId={({ data }) => data.theme}
+              selectedRowId={selectedTheme}
+              onSelectionChange={(theme) => setSelectedTheme(theme?.theme || null)}
+              loading={loadingThemes}
+              height={380}
+            />
+          </Suspense>
 
           {!loadingThemes && themes.length === 0 ? (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">

@@ -16,17 +16,16 @@ import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationEx
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioHoldingRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.ThemeRepository;
 
+import lombok.AllArgsConstructor;
+
+
 @Service
+@AllArgsConstructor 
 public class HoldingAllocationService {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private final PortfolioHoldingRepository holdings;
     private final ThemeRepository themes;
-
-    public HoldingAllocationService(PortfolioHoldingRepository holdings, ThemeRepository themes) {
-        this.holdings = holdings;
-        this.themes = themes;
-    }
 
     public Set<AssetClass> allowedAssetClasses(Portfolio portfolio) {
         if (portfolio.getTheme() == null) return Set.of();
