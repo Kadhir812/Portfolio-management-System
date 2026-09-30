@@ -7,6 +7,11 @@ import { HoldingMetrics } from '../components/holdings/HoldingMetrics';
 import { AddSecurityForm } from '../components/holdings/AddSecurityForm';
 import { AllocationSummary } from '../components/holdings/AllocationSummary';
 import { HoldingsTable } from '../components/holdings/HoldingsTable';
+import { localDateString } from '../lib/utils';
+
+const eligiblePriceDate = (portfolio) => portfolio.holdingsSaved
+  ? localDateString()
+  : portfolio.purchaseDate || localDateString();
 
 export function HoldingsPage() {
   const { id: portfolioId } = useParams();
@@ -33,11 +38,11 @@ export function HoldingsPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const [portfolioData, holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
-          api.portfolios.get(portfolioId),
+        const portfolioData = await api.portfolios.get(portfolioId);
+        const [holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
           api.holdings.list(portfolioId),
           api.holdings.summary(portfolioId),
-          api.holdings.eligibleSecurities(portfolioId),
+          api.holdings.eligibleSecurities(portfolioId, eligiblePriceDate(portfolioData)),
           api.themes.get(portfolioId).catch(() => null),
           api.themes.list().catch(() => [])
         ]);
@@ -57,11 +62,11 @@ export function HoldingsPage() {
   }, [portfolioId]);
 
   const refreshData = async () => {
-    const [portfolioData, holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
-      api.portfolios.get(portfolioId),
+    const portfolioData = await api.portfolios.get(portfolioId);
+    const [holdingData, summaryData, eligibleData, themeData, themeDefinitions] = await Promise.all([
       api.holdings.list(portfolioId),
       api.holdings.summary(portfolioId),
-      api.holdings.eligibleSecurities(portfolioId),
+      api.holdings.eligibleSecurities(portfolioId, eligiblePriceDate(portfolioData)),
       api.themes.get(portfolioId).catch(() => null),
       api.themes.list().catch(() => [])
     ]);

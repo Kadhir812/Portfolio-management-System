@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Filter } from 'lucide-react';
 import { api } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { Badge } from '../components/Badge';
+import { localDateString } from '../lib/utils';
 
 const DataGrid = lazy(() => import('../components/ui/DataGrid').then((module) => ({ default: module.DataGrid })));
 
@@ -344,8 +345,8 @@ export function CreatePortfolioPage() {
                     onChange={(e) => updateField('benchmark', e.target.value)}
                     className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
                   >
-                    {benchmarkOptions.map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                    {benchmarkOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
                 </label>

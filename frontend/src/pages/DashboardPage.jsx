@@ -105,6 +105,15 @@ export function DashboardPage() {
         <Metric title="Asset classes beyond 5% drift" value={alerts.length} icon={AlertTriangle} tone={alerts.length ? 'danger' : 'good'} />
       </div>
 
+      <BenchmarkPanel
+        portfolioId={id}
+        purchaseDate={valuation.purchaseDate}
+        endDate={valuation.effectiveDate}
+        currency={portfolio?.currency || 'INR'}
+        preferredIndex={portfolio?.benchmark}
+        availableDates={valuation.availableDates}
+      />
+
       {alerts.length > 0 && <Link to={`/portfolios/${id}/rebalance?date=${valuation.requestedDate}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-950">
         <span className="flex items-center gap-2 font-medium"><AlertTriangle className="h-5 w-5" />Allocation drift exceeds 5 percentage points: {alerts.map((a) => label(a.assetClass)).join(', ')}</span><span className="font-semibold">Review rebalance →</span>
       </Link>}
