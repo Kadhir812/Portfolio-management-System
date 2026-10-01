@@ -3,26 +3,25 @@ package com.hexaware.portfolio.portfolio_backend.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import org.hibernate.annotations.Check;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.hexaware.portfolio.security.entity.SecurityDetails;
-
-
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
-
+import com.hexaware.portfolio.security.entity.SecurityDetails;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.ForeignKey;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.Check;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -49,16 +48,17 @@ public class PortfolioHolding {
     private Long securityId;
 
     @JsonIgnore
-    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "portfolio_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_holdings_portfolio"))
     private Portfolio portfolio;
 
     @JsonIgnore
-    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "security_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_holdings_security"))
     private SecurityDetails security;
+
     private String isin;
     private String securityName;
     private String symbol;

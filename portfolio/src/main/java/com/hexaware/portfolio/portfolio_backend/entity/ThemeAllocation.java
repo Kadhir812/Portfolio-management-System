@@ -1,12 +1,14 @@
 package com.hexaware.portfolio.portfolio_backend.entity;
 
 import java.math.BigDecimal;
+
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,8 +36,8 @@ public class ThemeAllocation {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-        @JoinColumn(name = "theme_id", nullable = false,
-            foreignKey = @jakarta.persistence.ForeignKey(name = "fk_theme_allocations_theme"))
+    @JoinColumn(name = "theme_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_theme_allocations_theme"))
     private ThemeDefinition theme;
 
     @Enumerated(EnumType.STRING)

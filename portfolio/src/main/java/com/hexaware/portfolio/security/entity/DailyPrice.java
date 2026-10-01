@@ -1,11 +1,14 @@
 package com.hexaware.portfolio.security.entity;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import org.hibernate.annotations.Check;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -13,8 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.ForeignKey;
-import org.hibernate.annotations.Check;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,7 +32,25 @@ import lombok.NoArgsConstructor;
         )
     }
 )
-@Check(name = "ck_daily_prices_valid_values", constraints = "((valuation_price IS NOT NULL AND valuation_price > 0) OR (close_price IS NOT NULL AND close_price > 0) OR (nav IS NOT NULL AND nav > 0) OR (spot_price IS NOT NULL AND spot_price > 0) OR (last_price IS NOT NULL AND last_price > 0)) AND (open_price IS NULL OR open_price > 0) AND (high_price IS NULL OR high_price > 0) AND (low_price IS NULL OR low_price > 0) AND (prev_close IS NULL OR prev_close > 0) AND (last_price IS NULL OR last_price > 0) AND (close_price IS NULL OR close_price > 0) AND (nav IS NULL OR nav > 0) AND (spot_price IS NULL OR spot_price > 0) AND (valuation_price IS NULL OR valuation_price > 0) AND (volume IS NULL OR volume >= 0) AND (high_price IS NULL OR low_price IS NULL OR high_price >= low_price)")
+@Check(
+    name = "ck_daily_prices_valid_values",
+    constraints = "((valuation_price IS NOT NULL AND valuation_price > 0) "
+        + "OR (close_price IS NOT NULL AND close_price > 0) "
+        + "OR (nav IS NOT NULL AND nav > 0) "
+        + "OR (spot_price IS NOT NULL AND spot_price > 0) "
+        + "OR (last_price IS NOT NULL AND last_price > 0)) "
+        + "AND (open_price IS NULL OR open_price > 0) "
+        + "AND (high_price IS NULL OR high_price > 0) "
+        + "AND (low_price IS NULL OR low_price > 0) "
+        + "AND (prev_close IS NULL OR prev_close > 0) "
+        + "AND (last_price IS NULL OR last_price > 0) "
+        + "AND (close_price IS NULL OR close_price > 0) "
+        + "AND (nav IS NULL OR nav > 0) "
+        + "AND (spot_price IS NULL OR spot_price > 0) "
+        + "AND (valuation_price IS NULL OR valuation_price > 0) "
+        + "AND (volume IS NULL OR volume >= 0) "
+        + "AND (high_price IS NULL OR low_price IS NULL OR high_price >= low_price)"
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -89,21 +109,40 @@ public class DailyPrice {
     private BigDecimal valuationPrice;
 
     public void validateMarketData() {
-        if (!isPositive(valuationPrice) && !isPositive(closePrice) && !isPositive(nav)
-                && !isPositive(spotPrice) && !isPositive(lastPrice)) {
-            throw new IllegalArgumentException("Daily price must contain a positive valuation, close, NAV, spot, or last price");
+        boolean hasUsablePrice = isPositive(valuationPrice)
+                || isPositive(closePrice)
+                || isPositive(nav)
+                || isPositive(spotPrice)
+                || isPositive(lastPrice);
+
+        if (!hasUsablePrice) {
+            throw new IllegalArgumentException(
+                    "Daily price must contain a positive valuation, close, NAV, spot, or last price");
         }
-        if (!isValidOptionalPrice(openPrice) || !isValidOptionalPrice(highPrice)
-                || !isValidOptionalPrice(lowPrice) || !isValidOptionalPrice(prevClose)
-                || !isValidOptionalPrice(lastPrice) || !isValidOptionalPrice(closePrice)
-                || !isValidOptionalPrice(nav) || !isValidOptionalPrice(spotPrice)
-                || !isValidOptionalPrice(valuationPrice)) {
+
+        boolean allProvidedPricesArePositive = isPositiveOrNull(openPrice)
+                && isPositiveOrNull(highPrice)
+                && isPositiveOrNull(lowPrice)
+                && isPositiveOrNull(prevClose)
+                && isPositiveOrNull(lastPrice)
+                && isPositiveOrNull(closePrice)
+                && isPositiveOrNull(nav)
+                && isPositiveOrNull(spotPrice)
+                && isPositiveOrNull(valuationPrice);
+
+        if (!allProvidedPricesArePositive) {
             throw new IllegalArgumentException("Daily price fields must be positive when provided");
         }
+
         if (volume != null && volume < 0) {
             throw new IllegalArgumentException("Daily price volume cannot be negative");
         }
-        if (highPrice != null && lowPrice != null && highPrice.compareTo(lowPrice) < 0) {
+
+        boolean highPriceIsAtLeastLowPrice = highPrice == null
+                || lowPrice == null
+                || highPrice.compareTo(lowPrice) >= 0;
+
+        if (!highPriceIsAtLeastLowPrice) {
             throw new IllegalArgumentException("Daily high price cannot be below the low price");
         }
     }
@@ -112,7 +151,7 @@ public class DailyPrice {
         return value != null && value.signum() > 0;
     }
 
-    private static boolean isValidOptionalPrice(BigDecimal value) {
+    private static boolean isPositiveOrNull(BigDecimal value) {
         return value == null || value.signum() > 0;
     }
 }
