@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
+import com.hexaware.portfolio.security.entity.EquityCategory;
 import com.hexaware.portfolio.security.entity.SecurityDetails;
 
 import jakarta.persistence.Column;
@@ -51,12 +52,16 @@ public class PortfolioHolding {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "portfolio_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_holdings_portfolio"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private Portfolio portfolio;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "security_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_holdings_security"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private SecurityDetails security;
 
     private String isin;
@@ -66,6 +71,13 @@ public class PortfolioHolding {
     @Enumerated(EnumType.STRING)
     @Column(name = "asset_class", nullable = false, length = 40)
     private AssetClass assetClass;
+
+    @Column(name = "sub_asset_class", length = 100)
+    private String subAssetClass;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "equity_category", length = 20)
+    private EquityCategory equityCategory;
 
     @Column(nullable = false, precision = 24, scale = 8)
     private BigDecimal shares;

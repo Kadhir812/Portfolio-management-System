@@ -15,16 +15,18 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.ForeignKey;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "benchmark_daily_prices", uniqueConstraints = {
         @UniqueConstraint(name = "uk_benchmark_daily_price_date", columnNames = { "benchmark_id", "trade_date" })
 })
-@Getter
-@Setter
+@Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class BenchmarkDailyPrice {
     @Id
@@ -32,8 +34,10 @@ public class BenchmarkDailyPrice {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-        @JoinColumn(name = "benchmark_id", nullable = false,
+    @JoinColumn(name = "benchmark_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_benchmark_daily_prices_index"))
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private BenchmarkIndex benchmarkIndex;
 
     @Column(name = "trade_date", nullable = false)

@@ -73,6 +73,8 @@ public class DailyPrice {
         nullable = false,
         foreignKey = @ForeignKey(name = "fk_daily_prices_security")
     )
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private SecurityDetails securityDetails;
 
     @Column(name = "trade_date", nullable = false)

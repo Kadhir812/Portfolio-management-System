@@ -58,7 +58,18 @@ public class PortfolioHoldingService {
             AssetClass assetClass = securityService.assetClass(s.getAssetType());
             if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass)) return null;
             Optional<DailyPrice> p = asOfDate == null ? Optional.ofNullable(securityService.latestPrice(s.getSecurityId())) : prices.findTopBySecurityIdAndTradeDateLessThanEqualOrderByTradeDateDesc(s.getSecurityId(), asOfDate);
-            return p.map(price -> new EligibleSecurityResponse(s.getSecurityId(), s.getIsin(), s.getSymbol(), s.getDescription(), assetClass, securityService.priceValue(price), price.getTradeDate())).orElse(null);
+                return p.map(price -> new EligibleSecurityResponse(
+                    s.getSecurityId(),
+                    s.getIsin(),
+                    s.getSymbol(),
+                    s.getName(),
+                    s.getDescription(),
+                    assetClass,
+                    s.getAssetClassMaster() == null ? null : s.getAssetClassMaster().getAssetClass().name(),
+                    s.getAssetClassMaster() == null ? null : s.getAssetClassMaster().getSubAssetClass(),
+                    s.getEquityCategory(),
+                    securityService.priceValue(price),
+                    price.getTradeDate())).orElse(null);
         }).filter(Objects::nonNull).toList();
     }
 
@@ -87,6 +98,9 @@ public class PortfolioHoldingService {
             existing.setSymbol(s.getSymbol());
             existing.setSecurityName(s.getName());
             existing.setAssetClass(securityService.assetClass(s.getAssetType()));
+                existing.setSubAssetClass(s.getAssetClassMaster() == null
+                    ? null : s.getAssetClassMaster().getSubAssetClass());
+                existing.setEquityCategory(s.getEquityCategory());
             existing.setShares(existing.getShares().add(request.shares()));
             existing.setPrice(unitPrice);
             existing.setValue(unitPrice.multiply(existing.getShares()).setScale(2, RoundingMode.HALF_UP));
@@ -97,7 +111,9 @@ public class PortfolioHoldingService {
             return saved;
         }
         PortfolioHolding holding = PortfolioHolding.builder().portfolioId(portfolioId).securityId(s.getSecurityId()).isin(s.getIsin()).symbol(s.getSymbol())
-            .securityName(s.getName()).assetClass(securityService.assetClass(s.getAssetType())).shares(request.shares())
+            .securityName(s.getName()).assetClass(securityService.assetClass(s.getAssetType()))
+                .subAssetClass(s.getAssetClassMaster() == null ? null : s.getAssetClassMaster().getSubAssetClass())
+                .equityCategory(s.getEquityCategory()).shares(request.shares())
                 .price(unitPrice).value(unitPrice.multiply(request.shares()).setScale(2, RoundingMode.HALF_UP))
                 .priceDate(price.getTradeDate()).createdAt(Instant.now()).updatedAt(Instant.now()).build();
         PortfolioHolding saved = holdings.save(holding);
@@ -287,7 +303,10 @@ public class PortfolioHoldingService {
             if (price == null) throw new PortfolioValidationException("No market price is available for " + security.getSymbol());
             BigDecimal unitPrice = securityService.priceValue(price);
             if (row == null) row = PortfolioHolding.builder().portfolioId(portfolioId).securityId(securityId).isin(security.getIsin()).createdAt(Instant.now()).build();
-            row.setSymbol(last.getSymbol()); row.setSecurityName(last.getSecurityName()); row.setAssetClass(last.getAssetClass());
+                row.setSymbol(last.getSymbol()); row.setSecurityName(last.getSecurityName()); row.setAssetClass(last.getAssetClass());
+                row.setSubAssetClass(security.getAssetClassMaster() == null
+                    ? null : security.getAssetClassMaster().getSubAssetClass());
+                row.setEquityCategory(security.getEquityCategory());
             row.setShares(shares); row.setPrice(unitPrice); row.setPriceDate(price.getTradeDate());
             row.setValue(unitPrice.multiply(shares).setScale(2, RoundingMode.HALF_UP)); row.setUpdatedAt(Instant.now());
             holdings.save(row);

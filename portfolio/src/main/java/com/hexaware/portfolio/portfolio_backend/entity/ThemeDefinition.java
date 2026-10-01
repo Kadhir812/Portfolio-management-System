@@ -18,14 +18,16 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "investment_themes", uniqueConstraints = @UniqueConstraint(columnNames = "theme_code"))
-@Getter
-@Setter
+@Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class ThemeDefinition {
 
@@ -51,6 +53,9 @@ public class ThemeDefinition {
 
     @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("id ASC")
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @Builder.Default
     private List<ThemeAllocation> allocations = new ArrayList<>();
 
     public void addAllocation(ThemeAllocation allocation) {

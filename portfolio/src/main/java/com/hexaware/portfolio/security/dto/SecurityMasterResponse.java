@@ -1,6 +1,7 @@
 package com.hexaware.portfolio.security.dto;
 
 import com.hexaware.portfolio.security.entity.SecurityDetails;
+import com.hexaware.portfolio.security.entity.EquityCategory;
 
 public record SecurityMasterResponse(
         Long securityId,
@@ -18,7 +19,14 @@ public record SecurityMasterResponse(
         String gicsSectorCode,
         String gicsSectorName,
         String gicsIndustryCode,
-        String gicsIndustryName) {
+        String gicsIndustryName,
+        String assetClass,
+        String assetDescription,
+        String subAssetClass,
+        String risk,
+        String investmentHorizon,
+        String subAssetDescription,
+        EquityCategory equityCategory) {
 
     public static SecurityMasterResponse from(SecurityDetails security) {
         return new SecurityMasterResponse(
@@ -37,6 +45,13 @@ public record SecurityMasterResponse(
                 security.getGicsIndustry() == null ? null : security.getGicsIndustry().getSectorCode(),
                 security.getGicsIndustry() == null ? null : security.getGicsIndustry().getSectorName(),
                 security.getGicsIndustryCode(),
-                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getIndustryName());
+                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getIndustryName(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getAssetClass().name(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getAssetDescription(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getSubAssetClass(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getRisk(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getInvestmentHorizon(),
+                security.getAssetClassMaster() == null ? null : security.getAssetClassMaster().getSubAssetDescription(),
+                security.getEquityCategory());
     }
 }

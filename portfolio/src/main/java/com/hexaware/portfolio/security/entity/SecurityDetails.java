@@ -11,19 +11,28 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.Check;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "security_details", uniqueConstraints = @UniqueConstraint(
-    name = "uk_security_details_exchange_cupid", columnNames = { "exchange", "cupid" }))
+    name = "uk_security_details_exchange_cupid", columnNames = { "exchange", "cupid" }),
+        indexes = @Index(name = "idx_security_details_asset_class", columnList = "asset_class_id"))
+@Check(name = "ck_security_details_equity_category",
+        constraints = "equity_category IS NULL OR (asset_type = 'EQUITY' AND equity_category IN ('LARGE_CAP', 'MID_CAP', 'SMALL_CAP'))")
 @Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class SecurityDetails {
 
@@ -60,6 +69,20 @@ public class SecurityDetails {
     @Column(name = "currency", length = 10)
     private String currency;
 
+        @Column(name = "asset_class_id")
+        private Long assetClassId;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "asset_class_id", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_security_details_asset_class"))
+            @lombok.ToString.Exclude
+            @lombok.EqualsAndHashCode.Exclude
+        private AssetClassMaster assetClassMaster;
+
+        @Enumerated(EnumType.STRING)
+        @Column(name = "equity_category", length = 20)
+        private EquityCategory equityCategory;
+
     @Column(name = "gics_industry_code", columnDefinition = "char(6)")
     private String gicsIndustryCode;
 
@@ -67,6 +90,8 @@ public class SecurityDetails {
     @JoinColumn(name = "gics_industry_code", referencedColumnName = "industry_code",
             insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_security_details_gics_industry"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private GicsIndustry gicsIndustry;
 
     @Column(name = "logo_url", length = 500)

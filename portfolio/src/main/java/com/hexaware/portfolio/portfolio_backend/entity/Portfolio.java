@@ -48,6 +48,8 @@ public class Portfolio {
         @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_portfolios_user"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private AppUser owner;
 
     @Column(nullable = false)
@@ -84,6 +86,8 @@ public class Portfolio {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theme", referencedColumnName = "theme_code", insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolios_theme"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private ThemeDefinition themeDefinition;
 
     @Column(name = "purchase_date", nullable = false)

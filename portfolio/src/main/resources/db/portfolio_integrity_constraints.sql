@@ -323,3 +323,59 @@ SELECT 'Security has unknown GICS industry' AS issue, security_id, gics_industry
 FROM security_details s
 LEFT JOIN gics_industries g ON g.industry_code = s.gics_industry_code
 WHERE s.gics_industry_code IS NOT NULL AND g.industry_code IS NULL;
+
+-- Asset-class master and optional security/holding classifications.
+CREATE TABLE IF NOT EXISTS asset_class_master (
+        asset_id BIGINT NOT NULL AUTO_INCREMENT,
+        asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+        asset_description VARCHAR(500) NOT NULL,
+        sub_asset_class VARCHAR(100) NOT NULL,
+        risk VARCHAR(40) NOT NULL,
+        investment_horizon VARCHAR(60) NOT NULL,
+        sub_asset_description VARCHAR(500) NOT NULL,
+        PRIMARY KEY (asset_id),
+        CONSTRAINT uk_asset_class_master_class_subclass UNIQUE (asset_class, sub_asset_class)
+) ENGINE=InnoDB;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'asset_class_id'),
+                'SELECT 1', 'ALTER TABLE security_details ADD COLUMN asset_class_id BIGINT NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'equity_category'),
+                'SELECT 1', 'ALTER TABLE security_details ADD COLUMN equity_category ENUM(''LARGE_CAP'', ''MID_CAP'', ''SMALL_CAP'') NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'portfolio_holdings'
+                        AND column_name = 'sub_asset_class'),
+                'SELECT 1', 'ALTER TABLE portfolio_holdings ADD COLUMN sub_asset_class VARCHAR(100) NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'portfolio_holdings'
+                        AND column_name = 'equity_category'),
+                'SELECT 1', 'ALTER TABLE portfolio_holdings ADD COLUMN equity_category ENUM(''LARGE_CAP'', ''MID_CAP'', ''SMALL_CAP'') NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_schema = DATABASE() AND table_name = 'asset_class_master'
+                        AND constraint_name = 'uk_asset_class_master_class_subclass'),
+                'SELECT 1', 'ALTER TABLE asset_class_master ADD CONSTRAINT uk_asset_class_master_class_subclass UNIQUE (asset_class, sub_asset_class)');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.key_column_usage
+                WHERE constraint_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'asset_class_id' AND referenced_table_name = 'asset_class_master'
+                        AND referenced_column_name = 'asset_id'),
+                'SELECT 1', 'ALTER TABLE security_details ADD CONSTRAINT fk_security_details_asset_class FOREIGN KEY (asset_class_id) REFERENCES asset_class_master (asset_id) ON UPDATE CASCADE ON DELETE RESTRICT');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_schema = DATABASE() AND table_name = 'security_details'
+                        AND constraint_name = 'ck_security_details_equity_category'),
+                'SELECT 1', 'ALTER TABLE security_details ADD CONSTRAINT ck_security_details_equity_category CHECK (equity_category IS NULL OR (asset_type = ''EQUITY'' AND equity_category IN (''LARGE_CAP'', ''MID_CAP'', ''SMALL_CAP'')))');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;

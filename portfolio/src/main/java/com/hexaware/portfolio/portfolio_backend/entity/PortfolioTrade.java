@@ -48,12 +48,16 @@ public class PortfolioTrade {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "portfolio_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_trades_portfolio"))
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private Portfolio portfolio;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "security_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_trades_security"))
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private SecurityDetails security;
     private String isin;
     private String symbol;

@@ -14,7 +14,7 @@ import com.hexaware.portfolio.security.entity.SecurityDetails;
 public interface SecurityDetailsRepository extends JpaRepository<SecurityDetails, Long> {
 
     @Override
-    @EntityGraph(attributePaths = "gicsIndustry")
+    @EntityGraph(attributePaths = { "gicsIndustry", "assetClassMaster" })
     List<SecurityDetails> findAll();
 
     Optional<SecurityDetails> findByIsin(String isin);

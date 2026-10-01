@@ -34,6 +34,8 @@ public class BondDetails {
     @MapsId
     @JoinColumn(name = "security_id", referencedColumnName = "security_id",
             nullable = false, foreignKey = @ForeignKey(name = "fk_bond_details_security"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private SecurityDetails securityDetails;
 
     @Column(name = "issuer", length = 200)

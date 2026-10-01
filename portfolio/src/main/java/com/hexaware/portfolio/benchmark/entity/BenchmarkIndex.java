@@ -16,16 +16,18 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "benchmark_indices", uniqueConstraints = {
         @UniqueConstraint(name = "uk_benchmark_indices_index_code", columnNames = "index_code")
 })
-@Getter
-@Setter
+@Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class BenchmarkIndex {
     @Id
@@ -67,6 +69,9 @@ public class BenchmarkIndex {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "benchmarkIndex", cascade = CascadeType.ALL, orphanRemoval = true)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @Builder.Default
     private List<BenchmarkDailyPrice> dailyPrices = new ArrayList<>();
 
     @PrePersist

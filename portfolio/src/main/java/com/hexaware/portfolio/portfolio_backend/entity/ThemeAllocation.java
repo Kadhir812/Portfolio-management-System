@@ -18,16 +18,18 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.Check;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
+import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "theme_allocations", uniqueConstraints = @UniqueConstraint(
     name = "uk_theme_allocations_theme_asset", columnNames = { "theme_id", "asset_class" }))
 @Check(name = "ck_theme_allocations_percentage_range", constraints = "percentage >= 0 AND percentage <= 100")
-@Getter
-@Setter
+@Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class ThemeAllocation {
 
@@ -38,6 +40,8 @@ public class ThemeAllocation {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "theme_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_theme_allocations_theme"))
+        @lombok.ToString.Exclude
+        @lombok.EqualsAndHashCode.Exclude
     private ThemeDefinition theme;
 
     @Enumerated(EnumType.STRING)
