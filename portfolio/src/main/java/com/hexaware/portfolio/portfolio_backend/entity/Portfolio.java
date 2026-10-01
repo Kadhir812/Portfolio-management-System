@@ -2,6 +2,7 @@ package com.hexaware.portfolio.portfolio_backend.entity;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.BenchMark;
@@ -22,6 +23,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.FetchType;
+import org.hibernate.annotations.Check;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,6 +37,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "portfolios")
+@Check(name = "ck_portfolios_amount_nonnegative", constraints = "amount >= 0")
 public class Portfolio {
 
     @Id
@@ -41,33 +46,47 @@ public class Portfolio {
 
     @JsonIgnore
     @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+        @JoinColumn(name = "user_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_portfolios_user"))
     private AppUser owner;
 
-    private String name;
+        @Column(nullable = false)
+        private String name;
 
     @Enumerated(EnumType.STRING)
+        @Column(nullable = false)
     private PortfolioType type;              // PERCENTAGE | RUPEE
 
     @Enumerated(EnumType.STRING)
+        @Column(nullable = false)
     private Currency currency;               // INR | USD | GBP
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "benchmerk")
+        @Column(name = "benchmark", nullable = false)
     private BenchMark benchmark;             // NIFTY50 | NASDAQ | SMP500
 
     @Enumerated(EnumType.STRING)
+        @Column(nullable = false)
     private Exchange exchange;               // NSE | BSE
 
     @Enumerated(EnumType.STRING)
+        @Column(name = "rebalance_frequency", nullable = false)
     private RebalanceFrequency rebalanceFrequency; // DAILY | WEEKLY | MONTHLY
 
-    private Double amount;
+        @Column(nullable = false, precision = 20, scale = 2)
+        private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+        @Column(name = "theme", length = 40)
     private InvestmentThemes theme;  
+
+        @JsonIgnore
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "theme", referencedColumnName = "theme_code", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_portfolios_theme"))
+        private ThemeDefinition themeDefinition;
              
-    @Column(name = "purchase_date")
+        @Column(name = "purchase_date", nullable = false)
     private LocalDate purchaseDate;
 
     private boolean holdingsSaved;

@@ -127,6 +127,7 @@ String url = apiUrl
         List<DailyPrice> incomingRows = payload.trim().startsWith("{") || payload.trim().startsWith("[")
             ? jsonRows(payload, security)
             : csvRows(payload, security);
+        incomingRows.forEach(DailyPrice::validateMarketData);
         for (DailyPrice incoming : incomingRows) {
             DailyPrice stored = dailyPriceRepository
                     .findBySecurityIdAndTradeDate(incoming.getSecurityId(), incoming.getTradeDate())

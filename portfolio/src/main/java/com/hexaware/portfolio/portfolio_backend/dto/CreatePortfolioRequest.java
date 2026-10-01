@@ -1,5 +1,6 @@
 package com.hexaware.portfolio.portfolio_backend.dto;
 
+import java.math.BigDecimal;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.BenchMark;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
@@ -14,6 +15,6 @@ public record CreatePortfolioRequest(
         BenchMark benchmark,
         Exchange exchange,
         RebalanceFrequency rebalanceFrequency,
-        Double amount,
+        BigDecimal amount,
         LocalDate purchaseDate) {
 }

@@ -97,7 +97,7 @@ public class PortfolioService {
                 || request.exchange() == null || request.rebalanceFrequency() == null) {
             throw new PortfolioValidationException("All Stage 1 portfolio fields are required");
         }
-        if (request.amount() == null || request.amount() < 0) {
+        if (request.amount() == null || request.amount().signum() < 0) {
             throw new PortfolioValidationException("Amount must be zero or greater");
         }
         if (request.purchaseDate() != null && request.purchaseDate().isAfter(LocalDate.now())) {

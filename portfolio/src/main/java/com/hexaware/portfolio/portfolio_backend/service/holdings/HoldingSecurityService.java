@@ -81,7 +81,8 @@ public class HoldingSecurityService {
                 price.getValuationPrice(),
                 price.getClosePrice(),
                 price.getNav(),
-                price.getSpotPrice()
+                price.getSpotPrice(),
+                price.getLastPrice()
         };
         for (BigDecimal candidate : candidates) {
             if (candidate != null && candidate.signum() > 0) {

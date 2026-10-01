@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.ForeignKey;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,9 +29,10 @@ public class BondDetails {
     @Column(name = "security_id")
     private Long securityId;
 
-    @OneToOne
+        @OneToOne(optional = false)
     @MapsId
-    @JoinColumn(name = "security_id", referencedColumnName = "security_id")
+        @JoinColumn(name = "security_id", referencedColumnName = "security_id",
+            nullable = false, foreignKey = @ForeignKey(name = "fk_bond_details_security"))
     private SecurityDetails securityDetails;
 
     @Column(name = "issuer", length = 200)

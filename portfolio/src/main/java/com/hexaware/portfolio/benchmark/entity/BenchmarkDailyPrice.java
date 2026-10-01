@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.ForeignKey;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,7 +32,8 @@ public class BenchmarkDailyPrice {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "benchmark_id", nullable = false)
+        @JoinColumn(name = "benchmark_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_benchmark_daily_prices_index"))
     private BenchmarkIndex benchmarkIndex;
 
     @Column(name = "trade_date", nullable = false)

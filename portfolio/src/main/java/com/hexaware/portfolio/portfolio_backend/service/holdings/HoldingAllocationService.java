@@ -45,8 +45,8 @@ public class HoldingAllocationService {
         BigDecimal currentValue = holdings.findByPortfolioId(portfolio.getId()).stream()
                 .filter(holding -> holding != excludedHolding && holding.getAssetClass() == assetClass)
                 .map(PortfolioHolding::getValue).filter(Objects::nonNull).reduce(ZERO, BigDecimal::add);
-        BigDecimal targetValue = BigDecimal.valueOf(portfolio.getAmount())
-                .multiply(BigDecimal.valueOf(target.getPercentage()))
+        BigDecimal targetValue = portfolio.getAmount()
+                .multiply(target.getPercentage())
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
         BigDecimal proposedAllocation = currentValue.add(proposedValue);
 
@@ -54,7 +54,7 @@ public class HoldingAllocationService {
             BigDecimal currentTotal = holdings.findByPortfolioId(portfolio.getId()).stream()
                     .filter(holding -> holding != excludedHolding).map(PortfolioHolding::getValue)
                     .filter(Objects::nonNull).reduce(ZERO, BigDecimal::add);
-            BigDecimal residualAfterAddition = BigDecimal.valueOf(portfolio.getAmount())
+            BigDecimal residualAfterAddition = portfolio.getAmount()
                     .subtract(currentTotal.add(proposedValue)).max(ZERO);
             proposedAllocation = currentValue.add(proposedValue).add(residualAfterAddition);
         }

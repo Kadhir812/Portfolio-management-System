@@ -186,7 +186,7 @@ public class PortfolioHoldingService {
             classValues.merge(t.getAssetClass(), value, BigDecimal::add); total = total.add(value); totalCost = totalCost.add(averageCost.multiply(entry.getValue()));
             if (daily.getTradeDate().isBefore(effective)) effective = daily.getTradeDate();
         }
-        BigDecimal portfolioAmount = BigDecimal.valueOf(p.getAmount());
+        BigDecimal portfolioAmount = p.getAmount();
         BigDecimal residualCash = portfolioAmount.subtract(total).max(ZERO);
         if (residualCash.signum() > 0) {
             classValues.merge(AssetClass.CASH, residualCash, BigDecimal::add);
@@ -197,7 +197,7 @@ public class PortfolioHoldingService {
         if (p.getTheme() != null) {
             for (ThemeAllocation target : themes.findByTheme(p.getTheme()).orElseThrow().getAllocations()) {
                 BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.getAssetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
-                BigDecimal targetPct = BigDecimal.valueOf(target.getPercentage());
+                BigDecimal targetPct = target.getPercentage();
                 BigDecimal drift = current.subtract(targetPct).setScale(2, RoundingMode.HALF_UP);
                 allocation.add(new PortfolioValuationResponse.AllocationDrift(target.getAssetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
             }
