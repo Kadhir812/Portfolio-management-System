@@ -7,6 +7,15 @@ CREATE DATABASE IF NOT EXISTS portfolio_db
 
 USE portfolio_db;
 
+CREATE TABLE IF NOT EXISTS gics_industries (
+    industry_code CHAR(6) NOT NULL,
+    industry_name VARCHAR(120) NOT NULL,
+    sector_code CHAR(2) NOT NULL,
+    sector_name VARCHAR(100) NOT NULL,
+    PRIMARY KEY (industry_code),
+    KEY idx_gics_industries_sector (sector_code)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS app_users (
     id BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(254) NOT NULL,
@@ -22,14 +31,14 @@ CREATE TABLE IF NOT EXISTS security_details (
     security_id BIGINT NOT NULL AUTO_INCREMENT,
     asset_type VARCHAR(20) NOT NULL,
     isin VARCHAR(12) NULL,
+    cupid VARCHAR(50) NULL,
+    gics_industry_code CHAR(6) NULL,
     symbol VARCHAR(50) NULL,
     series VARCHAR(10) NULL,
     name VARCHAR(200) NOT NULL,
     description VARCHAR(500) NULL,
     exchange VARCHAR(30) NULL,
     currency VARCHAR(10) NULL,
-    sector VARCHAR(100) NULL,
-    industry VARCHAR(100) NULL,
     logo_url VARCHAR(500) NULL,
     website_url VARCHAR(500) NULL,
     country VARCHAR(100) NULL,
@@ -40,6 +49,11 @@ CREATE TABLE IF NOT EXISTS security_details (
     updated_at DATETIME(6) NULL,
     PRIMARY KEY (security_id),
     CONSTRAINT uq_security_details_isin UNIQUE (isin),
+    CONSTRAINT uk_security_details_exchange_cupid UNIQUE (exchange, cupid),
+    KEY idx_security_details_gics_industry (gics_industry_code),
+    CONSTRAINT fk_security_details_gics_industry FOREIGN KEY (gics_industry_code)
+        REFERENCES gics_industries (industry_code)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT ck_security_details_asset_type CHECK (
         asset_type IN ('EQUITY', 'MUTUAL', 'COMMODITY', 'BOND', 'CRYPTO', 'REIT', 'ETF', 'CASH')
     )

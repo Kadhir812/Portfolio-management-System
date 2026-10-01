@@ -8,15 +8,21 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "security_details")
+@Table(name = "security_details", uniqueConstraints = @UniqueConstraint(
+    name = "uk_security_details_exchange_cupid", columnNames = { "exchange", "cupid" }))
 @Data
 @NoArgsConstructor
 public class SecurityDetails {
@@ -32,6 +38,9 @@ public class SecurityDetails {
 
     @Column(name = "isin", unique = true, length = 12)
     private String isin;
+
+    @Column(name = "cupid", length = 50)
+    private String cupid;
 
     @Column(name = "symbol", length = 50)
     private String symbol;
@@ -51,11 +60,14 @@ public class SecurityDetails {
     @Column(name = "currency", length = 10)
     private String currency;
 
-    @Column(name = "sector", length = 100)
-    private String sector;
+    @Column(name = "gics_industry_code", columnDefinition = "char(6)")
+    private String gicsIndustryCode;
 
-    @Column(name = "industry", length = 100)
-    private String industry;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gics_industry_code", referencedColumnName = "industry_code",
+            insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_security_details_gics_industry"))
+    private GicsIndustry gicsIndustry;
 
     @Column(name = "logo_url", length = 500)
     private String logoUrl;

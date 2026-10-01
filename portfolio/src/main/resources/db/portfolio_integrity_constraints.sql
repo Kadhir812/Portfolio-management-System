@@ -3,6 +3,12 @@
 -- ddl-auto=update without attempting to add an existing constraint a second time.
 -- Run the preflight queries and resolve every result before applying section 3.
 
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'cupid'),
+                'SELECT 1', 'ALTER TABLE security_details ADD COLUMN cupid VARCHAR(50) NULL AFTER isin');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
 -- 1. Backfill only when the unique ISIN match exists.
 UPDATE portfolio_holdings h
 JOIN security_details s ON s.isin = h.isin
@@ -13,6 +19,12 @@ UPDATE portfolio_trades t
 JOIN security_details s ON s.isin = t.isin
 SET t.security_id = s.security_id
 WHERE t.security_id IS NULL AND t.isin IS NOT NULL;
+
+SELECT exchange, cupid, COUNT(*) AS row_count
+FROM security_details
+WHERE cupid IS NOT NULL
+GROUP BY exchange, cupid
+HAVING COUNT(*) > 1;
 
 -- 2. Preflight. Every query must return no rows before section 3.
 SELECT 'portfolio required values' AS issue, id FROM portfolios
@@ -99,6 +111,12 @@ LEFT JOIN security_details s ON s.security_id = b.security_id WHERE s.security_i
 -- For duplicate holdings, reconcile shares/value and retain one row; never merge blindly.
 
 -- 3. Normalize required numeric columns and the portfolio theme key.
+ALTER TABLE gics_industries
+        MODIFY industry_code CHAR(6) NOT NULL,
+        MODIFY industry_name VARCHAR(120) NOT NULL,
+        MODIFY sector_code CHAR(2) NOT NULL,
+        MODIFY sector_name VARCHAR(100) NOT NULL;
+
 ALTER TABLE portfolios
         MODIFY name VARCHAR(255) NOT NULL,
         MODIFY type VARCHAR(255) NOT NULL,
@@ -163,6 +181,19 @@ SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints
         WHERE constraint_schema = DATABASE() AND table_name = 'theme_allocations'
             AND constraint_name = 'uk_theme_allocations_theme_asset'),
         'SELECT 1', 'ALTER TABLE theme_allocations ADD CONSTRAINT uk_theme_allocations_theme_asset UNIQUE (theme_id, asset_class)');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_schema = DATABASE() AND table_name = 'security_details'
+                        AND constraint_name = 'uk_security_details_exchange_cupid'),
+                'SELECT 1', 'ALTER TABLE security_details ADD CONSTRAINT uk_security_details_exchange_cupid UNIQUE (exchange, cupid)');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.key_column_usage
+                WHERE constraint_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'gics_industry_code' AND referenced_table_name = 'gics_industries'
+                        AND referenced_column_name = 'industry_code'),
+                'SELECT 1', 'ALTER TABLE security_details ADD CONSTRAINT fk_security_details_gics_industry FOREIGN KEY (gics_industry_code) REFERENCES gics_industries (industry_code) ON UPDATE CASCADE ON DELETE RESTRICT');
 PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
 
 -- Foreign keys are detected by their column relationship, including older unnamed keys.
@@ -235,3 +266,60 @@ SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.key_column_usage
             AND referenced_column_name = 'benchmark_id'),
         'SELECT 1', 'ALTER TABLE benchmark_daily_prices ADD CONSTRAINT fk_benchmark_daily_prices_index FOREIGN KEY (benchmark_id) REFERENCES benchmark_indices (benchmark_id) ON UPDATE CASCADE ON DELETE RESTRICT');
 PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+CREATE TABLE IF NOT EXISTS gics_industries (
+        industry_code CHAR(6) NOT NULL,
+        industry_name VARCHAR(120) NOT NULL,
+        sector_code CHAR(2) NOT NULL,
+        sector_name VARCHAR(100) NOT NULL,
+        PRIMARY KEY (industry_code),
+        KEY idx_gics_industries_sector (sector_code)
+) ENGINE=InnoDB;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'gics_industries'
+                        AND column_name = 'sector_name'),
+                'SELECT 1', 'ALTER TABLE gics_industries ADD COLUMN sector_name VARCHAR(100) NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.tables
+                WHERE table_schema = DATABASE() AND table_name = 'gics_sectors'),
+                'UPDATE gics_industries i JOIN gics_sectors s ON s.sector_code = i.sector_code SET i.sector_name = s.sector_name WHERE i.sector_name IS NULL',
+                'SELECT 1');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SELECT 'GICS industry missing sector name' AS issue, industry_code, sector_code
+FROM gics_industries
+WHERE sector_name IS NULL OR TRIM(sector_name) = '';
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_schema = DATABASE() AND table_name = 'gics_industries'
+                        AND constraint_name = 'fk_gics_industries_sector'),
+                'ALTER TABLE gics_industries DROP FOREIGN KEY fk_gics_industries_sector',
+                'SELECT 1');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+DROP TABLE IF EXISTS gics_sectors;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'gics_industry_code'),
+                'SELECT 1', 'ALTER TABLE security_details ADD COLUMN gics_industry_code CHAR(6) NULL');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'sector'),
+                'ALTER TABLE security_details DROP COLUMN sector', 'SELECT 1');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'security_details'
+                        AND column_name = 'industry'),
+                'ALTER TABLE security_details DROP COLUMN industry', 'SELECT 1');
+PREPARE constraint_stmt FROM @ddl; EXECUTE constraint_stmt; DEALLOCATE PREPARE constraint_stmt;
+
+SELECT 'Security has unknown GICS industry' AS issue, security_id, gics_industry_code
+FROM security_details s
+LEFT JOIN gics_industries g ON g.industry_code = s.gics_industry_code
+WHERE s.gics_industry_code IS NOT NULL AND g.industry_code IS NULL;

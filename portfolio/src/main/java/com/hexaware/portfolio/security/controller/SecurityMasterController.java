@@ -22,8 +22,10 @@ public class SecurityMasterController {
     private final SecurityDetailsService securities;
 
     @GetMapping
-    public List<SecurityMasterResponse> list() {
-        return securities.findAll().stream()
+    public List<SecurityMasterResponse> list(
+            @RequestParam(required = false) String sectorCode,
+            @RequestParam(required = false) String industryCode) {
+        return securities.findAllByGics(sectorCode, industryCode).stream()
                 .map(SecurityMasterResponse::from)
                 .sorted(Comparator.comparing(SecurityMasterResponse::exchange,
                                 Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
@@ -36,24 +38,33 @@ public class SecurityMasterController {
     public SecurityMasterResponse search(
             @RequestParam(required = false) String symbol,
             @RequestParam(required = false) String exchange,
-            @RequestParam(required = false) String isin) {
+            @RequestParam(required = false) String isin,
+            @RequestParam(required = false) String cupid) {
         boolean hasSymbol = symbol != null && !symbol.isBlank();
         boolean hasExchange = exchange != null && !exchange.isBlank();
         boolean hasIsin = isin != null && !isin.isBlank();
+        boolean hasCupid = cupid != null && !cupid.isBlank();
 
-        if (hasSymbol && !hasExchange && !hasIsin) {
+        if (hasSymbol && !hasExchange && !hasIsin && !hasCupid) {
             return securities.findFirstBySymbol(symbol.trim())
                     .map(SecurityMasterResponse::from)
                     .orElseThrow(() -> notFound("No security found for symbol " + symbol.trim()));
         }
-        if (!hasSymbol && hasExchange && hasIsin) {
+        if (!hasSymbol && hasExchange && hasIsin && !hasCupid
+            && "NSE".equalsIgnoreCase(exchange.trim())) {
             return securities.findByExchangeAndIsin(exchange.trim(), isin.trim())
                     .map(SecurityMasterResponse::from)
-                    .orElseThrow(() -> notFound("No security found for exchange and ISIN"));
+                .orElseThrow(() -> notFound("No security found for NSE and ISIN"));
+        }
+        if (!hasSymbol && hasExchange && hasCupid && !hasIsin
+            && ("LSE".equalsIgnoreCase(exchange.trim()) || "LSEG".equalsIgnoreCase(exchange.trim()))) {
+            return securities.findByExchangeAndCupid(exchange.trim(), cupid.trim())
+                .map(SecurityMasterResponse::from)
+                .orElseThrow(() -> notFound("No security found for LSE and CUPID"));
         }
 
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Search using either symbol, or both exchange and ISIN");
+            "Search by symbol, NSE plus ISIN, or LSE plus CUPID");
     }
 
     private ResponseStatusException notFound(String message) {

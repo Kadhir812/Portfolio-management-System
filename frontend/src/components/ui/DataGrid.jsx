@@ -40,6 +40,7 @@ export function DataGrid({
   height = 360
 }) {
   const gridRef = useRef(null);
+  
   const defaultColDef = useMemo(() => ({
     resizable: true,
     sortable: false,

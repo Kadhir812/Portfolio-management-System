@@ -8,7 +8,7 @@ const requiredFields = [
   { label: 'Security symbol', value: (security) => security.symbol },
   { label: 'Security series', value: (security) => security.series },
   { label: 'Security description', value: (security) => security.description },
-  { label: 'Security ID', value: (security) => security.isin || security.securityId },
+  { label: 'Security identifier', value: (security) => security.isin || security.cupid || security.securityId },
   { label: 'Country', value: (security) => security.country },
   { label: 'Currency', value: (security) => security.currency }
 ];
@@ -22,7 +22,7 @@ export function SecuritiesPage() {
   const [searchMode, setSearchMode] = useState('symbol');
   const [symbol, setSymbol] = useState('');
   const [exchange, setExchange] = useState('');
-  const [isin, setIsin] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [security, setSecurity] = useState(null);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,6 +32,11 @@ export function SecuritiesPage() {
   const [masterError, setMasterError] = useState('');
 
   const missingFields = security ? missingRequiredFields(security) : [];
+  const identifierName = exchange === 'NSE'
+    ? 'ISIN'
+    : exchange
+      ? 'CUPID'
+      : 'Security identifier';
 
   useEffect(() => {
     let active = true;
@@ -52,7 +57,10 @@ export function SecuritiesPage() {
     try {
       const query = searchMode === 'symbol'
         ? { symbol: symbol.trim() }
-        : { exchange: exchange.trim(), isin: isin.trim() };
+        : {
+            exchange: exchange.trim(),
+            [exchange === 'NSE' ? 'isin' : 'cupid']: identifier.trim()
+          };
       setSecurity(await api.securities.search(query));
     } catch (searchError) {
       setError(searchError.message || 'Unable to search the securities master.');
@@ -73,7 +81,7 @@ export function SecuritiesPage() {
       <div>
         <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Market data</p>
         <h2 className="mt-1 text-3xl font-bold">Securities</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Search the securities master by symbol or by exchange and ISIN.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Search the securities master by symbol or by exchange and identifier.</p>
       </div>
 
       <section className="max-w-3xl rounded-lg border border-border bg-card p-5">
@@ -88,11 +96,11 @@ export function SecuritiesPage() {
           </button>
           <button
             type="button"
-            aria-pressed={searchMode === 'exchangeIsin'}
-            onClick={() => changeSearchMode('exchangeIsin')}
-            className={`rounded px-3 py-1.5 text-sm font-medium ${searchMode === 'exchangeIsin' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            aria-pressed={searchMode === 'exchangeIdentifier'}
+            onClick={() => changeSearchMode('exchangeIdentifier')}
+            className={`rounded px-3 py-1.5 text-sm font-medium ${searchMode === 'exchangeIdentifier' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
           >
-            By exchange + ISIN
+            By exchange + identifier
           </button>
         </div>
 
@@ -112,21 +120,27 @@ export function SecuritiesPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1.5 text-sm font-medium">
                 Stock exchange
-                <input
+                <select
                   required
                   value={exchange}
-                  onChange={(event) => setExchange(event.target.value)}
-                  placeholder="LSEG or NSE"
+                  onChange={(event) => {
+                    setExchange(event.target.value);
+                    setIdentifier('');
+                  }}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 font-normal"
-                />
+                >
+                  <option value="">Choose an exchange</option>
+                  <option value="NSE">NSE</option>
+                  <option value="LSE">LSE</option>
+                </select>
               </label>
               <label className="block space-y-1.5 text-sm font-medium">
-                ISIN
+                {identifierName}
                 <input
                   required
-                  value={isin}
-                  onChange={(event) => setIsin(event.target.value)}
-                  placeholder="GB00BD97ND60"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                  placeholder={exchange === 'NSE' ? 'INE009A01021' : 'Enter CUPID'}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 font-normal"
                 />
               </label>
@@ -194,7 +208,7 @@ export function SecuritiesPage() {
                 <th className="px-3 py-3 font-medium">Symbol</th>
                 <th className="px-3 py-3 font-medium">Series</th>
                 <th className="px-3 py-3 font-medium">Description</th>
-                <th className="px-3 py-3 font-medium">Security ID / ISIN</th>
+                <th className="px-3 py-3 font-medium">Security identifier</th>
                 <th className="px-3 py-3 font-medium">Country</th>
                 <th className="px-3 py-3 font-medium">Currency</th>
                 <th className="px-3 py-3 font-medium">Data quality</th>
@@ -209,7 +223,7 @@ export function SecuritiesPage() {
                     <td className="px-3 py-3 font-medium">{record.symbol || '—'}</td>
                     <td className="px-3 py-3">{record.series || '—'}</td>
                     <td className="max-w-sm px-3 py-3">{record.description || '—'}</td>
-                    <td className="px-3 py-3">{record.isin || record.securityId || '—'}</td>
+                    <td className="px-3 py-3">{record.isin || record.cupid || record.securityId || '—'}</td>
                     <td className="px-3 py-3">{record.country || '—'}</td>
                     <td className="px-3 py-3">{record.currency || '—'}</td>
                     <td className="px-3 py-3">
