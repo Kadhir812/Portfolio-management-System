@@ -58,6 +58,12 @@ public class SecurityDetailsService {
         return repo.findAll();
     }
 
+    public List<SecurityDetails> search(String query) {
+        String value = query.trim();
+        return repo.findTop50ByNameContainingIgnoreCaseOrSymbolContainingIgnoreCaseOrIsinContainingIgnoreCaseOrCupidContainingIgnoreCaseOrderByNameAsc(
+                value, value, value, value);
+    }
+
     public List<SecurityDetails> findAllByGics(String sectorCode, String industryCode) {
         boolean hasSector = sectorCode != null && !sectorCode.isBlank();
         boolean hasIndustry = industryCode != null && !industryCode.isBlank();

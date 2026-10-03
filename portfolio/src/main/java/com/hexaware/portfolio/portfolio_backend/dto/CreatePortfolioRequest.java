@@ -6,6 +6,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioType;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import java.time.LocalDate;
 
 public record CreatePortfolioRequest(
@@ -16,5 +17,6 @@ public record CreatePortfolioRequest(
         Exchange exchange,
         RebalanceFrequency rebalanceFrequency,
         BigDecimal amount,
-        LocalDate purchaseDate) {
+        LocalDate purchaseDate,
+        PortfolioStatus status) {
 }

@@ -16,6 +16,18 @@ CREATE TABLE IF NOT EXISTS gics_industries (
     KEY idx_gics_industries_sector (sector_code)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS asset_class_master (
+    asset_id BIGINT NOT NULL AUTO_INCREMENT,
+    asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    asset_description VARCHAR(500) NOT NULL,
+    sub_asset_class VARCHAR(100) NOT NULL,
+    risk VARCHAR(40) NOT NULL,
+    investment_horizon VARCHAR(60) NOT NULL,
+    sub_asset_description VARCHAR(500) NOT NULL,
+    PRIMARY KEY (asset_id),
+    CONSTRAINT uk_asset_class_master_class_subclass UNIQUE (asset_class, sub_asset_class)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS app_users (
     id BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(254) NOT NULL,
@@ -33,6 +45,8 @@ CREATE TABLE IF NOT EXISTS security_details (
     isin VARCHAR(12) NULL,
     cupid VARCHAR(50) NULL,
     gics_industry_code CHAR(6) NULL,
+    asset_class_id BIGINT NULL,
+    equity_category ENUM('LARGE_CAP', 'MID_CAP', 'SMALL_CAP') NULL,
     symbol VARCHAR(50) NULL,
     series VARCHAR(10) NULL,
     name VARCHAR(200) NOT NULL,
@@ -54,6 +68,13 @@ CREATE TABLE IF NOT EXISTS security_details (
     CONSTRAINT fk_security_details_gics_industry FOREIGN KEY (gics_industry_code)
         REFERENCES gics_industries (industry_code)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+    KEY idx_security_details_asset_class (asset_class_id),
+    CONSTRAINT fk_security_details_asset_class FOREIGN KEY (asset_class_id)
+        REFERENCES asset_class_master (asset_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT ck_security_details_equity_category CHECK (
+        equity_category IS NULL OR (asset_type = 'EQUITY' AND equity_category IN ('LARGE_CAP', 'MID_CAP', 'SMALL_CAP'))
+    ),
     CONSTRAINT ck_security_details_asset_type CHECK (
         asset_type IN ('EQUITY', 'MUTUAL', 'COMMODITY', 'BOND', 'CRYPTO', 'REIT', 'ETF', 'CASH')
     )
@@ -112,6 +133,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     ) NULL,
     purchase_date DATE NOT NULL,
     holdings_saved BOOLEAN NOT NULL DEFAULT FALSE,
+    status ENUM('NEW', 'ACTIVE', 'CLOSED') NOT NULL DEFAULT 'NEW',
     created_at DATETIME(6) NULL,
     updated_at DATETIME(6) NULL,
     PRIMARY KEY (id),
@@ -139,6 +161,19 @@ CREATE TABLE IF NOT EXISTS theme_allocations (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS theme_equity_allocations (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    theme_id BIGINT NOT NULL,
+    equity_category ENUM('LARGE_CAP', 'MID_CAP', 'SMALL_CAP') NOT NULL,
+    percentage DECIMAL(5,2) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_theme_equity_allocations_theme_category UNIQUE (theme_id, equity_category),
+    CONSTRAINT ck_theme_equity_allocations_percentage_range CHECK (percentage >= 0 AND percentage <= 100),
+    CONSTRAINT fk_theme_equity_allocations_theme FOREIGN KEY (theme_id)
+        REFERENCES investment_themes (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS portfolio_holdings (
     id BIGINT NOT NULL AUTO_INCREMENT,
     portfolio_id BIGINT NOT NULL,
@@ -147,6 +182,8 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
     security_name VARCHAR(255) NULL,
     symbol VARCHAR(255) NULL,
     asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    sub_asset_class VARCHAR(100) NULL,
+    equity_category ENUM('LARGE_CAP', 'MID_CAP', 'SMALL_CAP') NULL,
     shares DECIMAL(24,8) NOT NULL,
     price DECIMAL(20,6) NOT NULL,
     value DECIMAL(20,2) NOT NULL,
@@ -272,3 +309,57 @@ CREATE TABLE IF NOT EXISTS benchmark_daily_prices (
         REFERENCES benchmark_indices (benchmark_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+INSERT IGNORE INTO investment_themes
+    (theme_code, label, risk, investment_horizon, description)
+VALUES
+    ('CONSERVATIVE', 'Conservative', 'Moderate', 'Medium Term',
+        'A balanced allocation focused on stability and diversified income.'),
+    ('MODERATELY_CONSERVATIVE', 'Moderately Conservative', 'Low', 'Short Term',
+        'A lower-risk allocation with a measured equity component.'),
+    ('AGGRESSIVE', 'Aggressive', 'High', 'Long Term',
+        'A growth-focused allocation with limited defensive assets.'),
+    ('MODERATELY_AGGRESSIVE', 'Moderately Aggressive', 'High', 'Long Term',
+        'A high-growth allocation balanced with small defensive positions.'),
+    ('VERY_AGGRESSIVE', 'Very Aggressive', 'Very High', 'Long Term',
+        'A high-volatility growth allocation for long-term investors.');
+
+INSERT INTO theme_allocations (theme_id, asset_class, percentage)
+SELECT theme.id, allocation.asset_class, allocation.percentage
+FROM investment_themes theme
+JOIN (
+    SELECT 'CONSERVATIVE' AS theme_code, 'STOCKS' AS asset_class, 15.00 AS percentage
+    UNION ALL SELECT 'CONSERVATIVE', 'MUTUAL_FUNDS', 25.00
+    UNION ALL SELECT 'CONSERVATIVE', 'COMMODITIES', 10.00
+    UNION ALL SELECT 'CONSERVATIVE', 'BONDS', 35.00
+    UNION ALL SELECT 'CONSERVATIVE', 'REITS', 5.00
+    UNION ALL SELECT 'CONSERVATIVE', 'ETFS', 5.00
+    UNION ALL SELECT 'CONSERVATIVE', 'CASH', 5.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'STOCKS', 25.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'MUTUAL_FUNDS', 25.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'COMMODITIES', 10.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'BONDS', 25.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'REITS', 5.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'ETFS', 5.00
+    UNION ALL SELECT 'MODERATELY_CONSERVATIVE', 'CASH', 5.00
+    UNION ALL SELECT 'AGGRESSIVE', 'STOCKS', 45.00
+    UNION ALL SELECT 'AGGRESSIVE', 'MUTUAL_FUNDS', 15.00
+    UNION ALL SELECT 'AGGRESSIVE', 'COMMODITIES', 5.00
+    UNION ALL SELECT 'AGGRESSIVE', 'BONDS', 10.00
+    UNION ALL SELECT 'AGGRESSIVE', 'CRYPTO', 10.00
+    UNION ALL SELECT 'AGGRESSIVE', 'REITS', 5.00
+    UNION ALL SELECT 'AGGRESSIVE', 'ETFS', 5.00
+    UNION ALL SELECT 'AGGRESSIVE', 'CASH', 5.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'STOCKS', 55.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'MUTUAL_FUNDS', 10.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'COMMODITIES', 5.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'BONDS', 5.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'CRYPTO', 10.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'REITS', 5.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'ETFS', 5.00
+    UNION ALL SELECT 'MODERATELY_AGGRESSIVE', 'CASH', 5.00
+    UNION ALL SELECT 'VERY_AGGRESSIVE', 'STOCKS', 85.00
+    UNION ALL SELECT 'VERY_AGGRESSIVE', 'CASH', 5.00
+    UNION ALL SELECT 'VERY_AGGRESSIVE', 'BONDS', 10.00
+) AS allocation ON allocation.theme_code = theme.theme_code
+ON DUPLICATE KEY UPDATE percentage = VALUES(percentage);

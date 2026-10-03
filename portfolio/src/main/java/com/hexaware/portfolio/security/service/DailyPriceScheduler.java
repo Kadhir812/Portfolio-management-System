@@ -177,6 +177,7 @@ String url = apiUrl
                         .lowPrice(decimal(value(record, headers, "lowprice")))
                         .lastPrice(decimal(value(record, headers, "lastprice")))
                         .closePrice(decimal(value(record, headers, "closeprice")))
+                        .valuationPrice(decimal(value(record, headers, "closeprice")))
                         // .volume(longValue(value(record, headers, "totaltradedquantity")))
                         .build());
             }
@@ -246,6 +247,7 @@ String url = apiUrl
     private static BigDecimal valuationPrice(JsonNode item, com.hexaware.portfolio.security.entity.AssetType assetType) {
         return switch (assetType) {
             case MUTUAL -> decimal(item, "nav");
+            case ETF -> decimal(item, "nav");
             case COMMODITY -> decimal(item, "spotPrice", "spot_price", "spot");
             default -> decimal(item, "closePrice", "close_price", "close", "lastPrice", "last_price", "last");
         };

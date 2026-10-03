@@ -4,6 +4,4 @@ export const eligiblePriceDate = (portfolio) => portfolio.holdingsSaved
   ? localDateString()
   : portfolio.purchaseDate || localDateString();
 
-export const formatAssetClass = (assetClass) => assetClass === 'STOCKS'
-  ? 'Equity'
-  : assetClass.replaceAll('_', ' ');
+export { formatAssetClass } from '../../lib/assetClassUtils';

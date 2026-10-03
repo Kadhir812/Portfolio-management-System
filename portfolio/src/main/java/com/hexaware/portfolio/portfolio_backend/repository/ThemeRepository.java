@@ -10,9 +10,9 @@ import com.hexaware.portfolio.portfolio_backend.entity.ThemeDefinition;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 
 public interface ThemeRepository extends JpaRepository<ThemeDefinition, Long> {
-        @EntityGraph(attributePaths = "allocations")
+        @EntityGraph(attributePaths = { "allocations", "equityAllocations" })
         Optional<ThemeDefinition> findByTheme(InvestmentThemes theme);
 
-        @EntityGraph(attributePaths = "allocations")
+        @EntityGraph(attributePaths = { "allocations", "equityAllocations" })
         List<ThemeDefinition> findAllByOrderByIdAsc();
 }

@@ -2,10 +2,11 @@ import { lazy, Suspense, useMemo } from 'react';
 import { RefreshCcw, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { formatAssetClass, formatSubAssetClass } from '../../lib/assetClassUtils';
 
 const DataGrid = lazy(() => import('../../components/ui/DataGrid').then((module) => ({ default: module.DataGrid })));
 const money = (value) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
-const assetLabel = (value) => value === 'STOCKS' ? 'Equity' : (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+const assetLabel = formatAssetClass;
 
 export function HoldingsTable({ rows, summary, targetAmount, saving, loading, error, onUpdateShares, onRemove, onRefresh }) {
   const columnDefs = useMemo(() => [
@@ -15,6 +16,20 @@ export function HoldingsTable({ rows, summary, targetAmount, saving, loading, er
       sortable: true,
       minWidth: 105,
       valueFormatter: ({ value }) => assetLabel(value)
+    },
+    {
+      headerName: 'Sub-asset class',
+      field: 'subAssetClass',
+      sortable: true,
+      minWidth: 140,
+      valueFormatter: ({ value, data }) => formatSubAssetClass(data?.assetClass, value)
+    },
+    {
+      headerName: 'Equity category',
+      field: 'equityCategory',
+      sortable: true,
+      minWidth: 135,
+      valueFormatter: ({ value }) => value ? assetLabel(value) : '—'
     },
     {
       headerName: 'Security',

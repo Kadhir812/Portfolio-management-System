@@ -5,10 +5,12 @@ import { api } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { Badge } from '../components/Badge';
 import { localDateString } from '../lib/utils';
+import { horizonOptions, themePayload, validateThemeDraft, riskOptions } from '../lib/themeConfig';
+import { assetClassMap, formatAssetClass } from '../lib/assetClassUtils';
 
 const DataGrid = lazy(() => import('../components/ui/DataGrid').then((module) => ({ default: module.DataGrid })));
 
-const steps = ['Portfolio Setup', 'Theme Selection', 'Asset Allocation'];
+const steps = ['Portfolio Setup', 'Theme Selection', 'Holdings'];
 
 const typeOptions = [
   { value: 'WEIGHTAGE', label: 'Percentage' },
@@ -17,6 +19,11 @@ const typeOptions = [
 const currencyOptions = ['INR', 'USD', 'GBP'];
 const exchangeOptions = ['NSE', 'BSE'];
 const rebalanceOptions = ['DAILY', 'WEEKLY', 'MONTHLY'];
+const portfolioStatusOptions = [
+  { value: 'NEW', label: 'New' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'CLOSED', label: 'Closed' }
+];
 const benchmarkOptions = ['NIFTY50', 'NASDAQ', 'SMP500'];
 const themeRiskOrder = {
   CONSERVATIVE: 0,
@@ -97,13 +104,19 @@ export function CreatePortfolioPage() {
     exchange: 'NSE',
     rebalanceFrequency: 'MONTHLY',
     amount: 100000,
-    purchaseDate: localDateString()
+    purchaseDate: localDateString(),
+    status: 'NEW'
   });
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [themes, setThemes] = useState([]);
   const [loadingThemes, setLoadingThemes] = useState(true);
+  const [assetClassMetadata, setAssetClassMetadata] = useState({});
   const [createdPortfolioId, setCreatedPortfolioId] = useState(null);
   const [holdingsSaved, setHoldingsSaved] = useState(false);
+  const [editingThemeTargets, setEditingThemeTargets] = useState(false);
+  const [themeTargetDraft, setThemeTargetDraft] = useState([]);
+  const [editingThemeDefinition, setEditingThemeDefinition] = useState(false);
+  const [themeDefinitionDraft, setThemeDefinitionDraft] = useState(null);
   const [portfolioLoaded, setPortfolioLoaded] = useState(!isEditing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -111,7 +124,12 @@ export function CreatePortfolioPage() {
   useEffect(() => {
     const loadThemes = async () => {
       try {
-        setThemes(await api.themes.list());
+        const [themeData, assetClasses] = await Promise.all([
+          api.themes.list(),
+          api.assetClasses.list()
+        ]);
+        setThemes(themeData);
+        setAssetClassMetadata(assetClassMap(assetClasses));
       } catch (e) {
         setError(e.message || 'Unable to load investment themes');
       } finally {
@@ -135,7 +153,8 @@ export function CreatePortfolioPage() {
           exchange: portfolio.exchange || 'NSE',
           rebalanceFrequency: portfolio.rebalanceFrequency || 'MONTHLY',
           amount: portfolio.amount || 0,
-          purchaseDate: portfolio.purchaseDate || localDateString()
+          purchaseDate: portfolio.purchaseDate || localDateString(),
+          status: portfolio.status || (portfolio.holdingsSaved ? 'ACTIVE' : 'NEW')
         });
         setCreatedPortfolioId(portfolio.id);
         setSelectedTheme(portfolio.theme || null);
@@ -171,7 +190,7 @@ export function CreatePortfolioPage() {
       sortable: false,
       filter: false,
       valueFormatter: ({ value }) => (value || [])
-        .map((allocation) => `${allocation.assetClass.replaceAll('_', ' ')} ${allocation.percentage}%`)
+        .map((allocation) => `${formatAssetClass(allocation.assetClass, assetClassMetadata)} ${allocation.percentage}%`)
         .join(' · '),
       flex: 2,
       minWidth: 300,
@@ -194,7 +213,7 @@ export function CreatePortfolioPage() {
       headerComponent: InvestmentDurationHeader,
       minWidth: 180
     }
-  ], []);
+  ], [assetClassMetadata]);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -251,6 +270,80 @@ export function CreatePortfolioPage() {
       setCurrentStep(2);
     } catch (e) {
       setError(e.message || 'Unable to attach the selected theme.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditingThemeTargets = () => {
+    setThemeTargetDraft(selectedThemeData?.equityAllocations?.map((allocation) => ({
+      equityCategory: allocation.equityCategory,
+      percentage: allocation.percentage
+    })) || []);
+    setEditingThemeTargets(true);
+  };
+
+  const saveThemeTargets = async () => {
+    const validationError = validateThemeDraft({
+      label: selectedThemeData.label,
+      risk: selectedThemeData.risk,
+      investmentHorizon: selectedThemeData.investmentHorizon,
+      description: selectedThemeData.description || '',
+      allocations: selectedThemeData.allocations
+    }, themeTargetDraft);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+      const updated = await api.themes.updateDefinition(
+        selectedThemeData.theme,
+        themePayload(selectedThemeData, themeTargetDraft)
+      );
+      setThemes((current) => current.map((theme) => theme.theme === updated.theme ? updated : theme));
+      setEditingThemeTargets(false);
+    } catch (e) {
+      setError(e.message || 'Unable to save theme configuration');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditingThemeDefinition = () => {
+    setThemeDefinitionDraft({
+      label: selectedThemeData.label,
+      risk: selectedThemeData.risk,
+      investmentHorizon: selectedThemeData.investmentHorizon,
+      description: selectedThemeData.description || '',
+      allocations: selectedThemeData.allocations.map((allocation) => ({
+        assetClass: allocation.assetClass,
+        percentage: allocation.percentage
+      }))
+    });
+    setEditingThemeDefinition(true);
+  };
+
+  const saveThemeDefinition = async () => {
+    const validationError = validateThemeDraft(themeDefinitionDraft, selectedThemeData.equityAllocations);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+      const updated = await api.themes.updateDefinition(
+        selectedThemeData.theme,
+        themePayload(themeDefinitionDraft, selectedThemeData.equityAllocations)
+      );
+      setThemes((current) => current.map((theme) => theme.theme === updated.theme ? updated : theme));
+      setEditingThemeDefinition(false);
+    } catch (e) {
+      setError(e.message || 'Unable to update theme details');
     } finally {
       setSaving(false);
     }
@@ -381,6 +474,20 @@ export function CreatePortfolioPage() {
               </label>
 
               <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">Portfolio status</span>
+                <select
+                  value={form.status}
+                  onChange={(e) => updateField('status', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                >
+                  {portfolioStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs text-slate-500">Active and closed statuses require saved holdings.</span>
+              </label>
+
+              <label className="block">
                 <span className="mb-2 block text-sm text-slate-300">Asset purchase date</span>
                 <input
                   type="date"
@@ -451,6 +558,111 @@ export function CreatePortfolioPage() {
             </div>
           ) : null}
 
+          {selectedThemeData?.equityAllocations?.length ? (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-white">Equity category targets</h3>
+                  <p className="mt-1 text-sm text-slate-400">These shared targets are used by portfolios using this theme.</p>
+                </div>
+                {!editingThemeTargets ? (
+                  <button type="button" onClick={startEditingThemeTargets} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200">
+                    Edit targets
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button type="button" onClick={saveThemeTargets} disabled={saving} className="rounded-xl bg-sky-300 px-3 py-2 text-sm font-medium text-slate-950 disabled:opacity-50">
+                      {saving ? 'Saving...' : 'Save targets'}
+                    </button>
+                    <button type="button" onClick={() => setEditingThemeTargets(false)} disabled={saving} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200 disabled:opacity-50">
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {selectedThemeData.equityAllocations.map((allocation) => {
+                  const draft = themeTargetDraft.find((item) => item.equityCategory === allocation.equityCategory);
+                  return (
+                    <label key={allocation.equityCategory} className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2 text-sm text-slate-300">
+                      <span className="block text-xs text-slate-500">{allocation.equityCategory.replace('_', ' ')}</span>
+                      {editingThemeTargets ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={draft?.percentage ?? ''}
+                          onChange={(event) => setThemeTargetDraft((current) => current.map((item) => item.equityCategory === allocation.equityCategory
+                            ? { ...item, percentage: event.target.value }
+                            : item))}
+                          className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-white"
+                        />
+                      ) : (
+                        <strong className="mt-1 block text-lg text-white">{allocation.percentage}%</strong>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {selectedThemeData ? (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-white">Theme details and asset allocation</h3>
+                  <p className="mt-1 text-sm text-slate-400">Edit the selected theme master data. Asset-class weights must total 100%.</p>
+                </div>
+                {!editingThemeDefinition ? (
+                  <button type="button" onClick={startEditingThemeDefinition} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200">
+                    Edit theme details
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button type="button" onClick={saveThemeDefinition} disabled={saving} className="rounded-xl bg-sky-300 px-3 py-2 text-sm font-medium text-slate-950 disabled:opacity-50">
+                      {saving ? 'Saving...' : 'Save theme'}
+                    </button>
+                    <button type="button" onClick={() => setEditingThemeDefinition(false)} disabled={saving} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-200 disabled:opacity-50">
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              {editingThemeDefinition ? (
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="text-sm text-slate-300">Theme name
+                    <input value={themeDefinitionDraft.label} onChange={(event) => setThemeDefinitionDraft((current) => ({ ...current, label: event.target.value }))} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white" />
+                  </label>
+                  <label className="text-sm text-slate-300">Risk
+                    <select value={themeDefinitionDraft.risk} onChange={(event) => setThemeDefinitionDraft((current) => ({ ...current, risk: event.target.value }))} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+                      {riskOptions.map((risk) => <option key={risk} value={risk}>{risk}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-300">Investment horizon
+                    <select value={themeDefinitionDraft.investmentHorizon} onChange={(event) => setThemeDefinitionDraft((current) => ({ ...current, investmentHorizon: event.target.value }))} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white">
+                      {horizonOptions.map((horizon) => <option key={horizon} value={horizon}>{horizon}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm text-slate-300 md:col-span-2">Description
+                    <textarea value={themeDefinitionDraft.description} onChange={(event) => setThemeDefinitionDraft((current) => ({ ...current, description: event.target.value }))} className="mt-1 min-h-20 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white" />
+                  </label>
+                  {themeDefinitionDraft.allocations.map((allocation) => (
+                    <label key={allocation.assetClass} className="text-sm text-slate-300">{formatAssetClass(allocation.assetClass, assetClassMetadata)} %
+                      <input type="number" min="0" max="100" step="0.01" value={allocation.percentage} onChange={(event) => setThemeDefinitionDraft((current) => ({
+                        ...current,
+                        allocations: current.allocations.map((item) => item.assetClass === allocation.assetClass
+                          ? { ...item, percentage: event.target.value }
+                          : item)
+                      }))} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-white" />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sky-400/20 bg-sky-400/5 p-4">
             <p className="text-sm text-slate-300">
               {selectedThemeData ? `Ready to continue with ${selectedThemeData.label}.` : 'Choose a theme to continue.'}
@@ -481,6 +693,9 @@ export function CreatePortfolioPage() {
               <div className="rounded-3xl border border-brand-500/30 bg-brand-500/5 p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-brand-100">Selected theme</p>
                 <h3 className="mt-2 text-2xl font-semibold text-white">{selectedThemeData.label}</h3>
+                <p className="mt-2 max-w-3xl text-sm text-slate-300">
+                  {selectedThemeData.description || 'Allocate the portfolio across the target asset classes before adding holdings.'}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge tone="info">{selectedThemeData.risk}</Badge>
                   <Badge tone="success">{selectedThemeData.investmentHorizon}</Badge>
@@ -488,15 +703,32 @@ export function CreatePortfolioPage() {
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {selectedThemeData.allocations.map((allocation) => (
                     <div key={allocation.assetClass} className="rounded-2xl border border-slate-800 bg-slate-950/50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{allocation.assetClass.replace('_', ' ')}</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500" title={assetClassMetadata[allocation.assetClass]?.assetDescription}>
+                        {formatAssetClass(allocation.assetClass, assetClassMetadata)}
+                      </p>
                       <p className="mt-2 text-xl font-semibold text-white">{allocation.percentage}%</p>
                     </div>
                   ))}
                 </div>
+                {selectedThemeData.equityAllocations?.length ? (
+                  <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Equity category targets</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      {selectedThemeData.equityAllocations.map((allocation) => (
+                        <div key={allocation.equityCategory} className="rounded-xl border border-slate-800 px-3 py-2">
+                          <p className="text-xs text-slate-500">{allocation.equityCategory.replace('_', ' ')}</p>
+                          <p className="mt-1 text-lg font-semibold text-white">{allocation.percentage}%</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
-                <p className="text-sm text-slate-300">Asset allocation stage is ready for the selected theme. The next step would allow you to add holdings and validate guardrails against the configured percentages.</p>
+                <p className="text-sm text-slate-300">
+                  Your theme is attached. Continue to Holdings to add securities and build the portfolio against these target allocations.
+                </p>
               </div>
 
               <div className="flex justify-between">
@@ -508,7 +740,7 @@ export function CreatePortfolioPage() {
                   onClick={() => navigate(`/portfolios/${createdPortfolioId}/holdings`)}
                   className="rounded-2xl bg-emerald-500 px-5 py-3 font-medium text-slate-950"
                 >
-                  Add holdings
+                  Go to Holdings
                 </button>
               </div>
             </div>

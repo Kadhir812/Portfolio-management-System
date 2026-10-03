@@ -52,13 +52,20 @@ export const api = {
 		get: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}`)).data,
 		create: async (payload) => (await client.post('/portfolios', payload)).data,
 		update: async (portfolioId, payload) => (await client.put(`/portfolios/${portfolioId}`, payload)).data,
+		close: async (portfolioId) => (await client.post(`/portfolios/${portfolioId}/close`)).data,
 		remove: async (portfolioId) => client.delete(`/portfolios/${portfolioId}`)
 	},
 	themes: {
 		list: async () => (await client.get('/themes')).data,
 		get: async (portfolioId) => (await client.get(`/portfolios/${portfolioId}/theme`)).data,
 		attach: async (portfolioId, theme) => (await client.put(`/portfolios/${portfolioId}/theme`, { theme })).data,
+		updateEquityAllocations: async (theme, allocations) => (await client.put(`/themes/${theme}/equity-allocations`, { allocations })).data,
+		update: async (theme, payload) => (await client.put(`/themes/${theme}`, payload)).data,
+		updateDefinition: async (theme, payload) => (await client.put(`/themes/${theme}/definition`, payload)).data,
 		remove: async (portfolioId) => client.delete(`/portfolios/${portfolioId}/theme`)
+	},
+	assetClasses: {
+		list: async () => (await client.get('/asset-classes')).data
 	},
 	securities: {
 		list: async () => (await client.get('/securities')).data,

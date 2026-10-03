@@ -1,7 +1,7 @@
 package com.hexaware.portfolio.portfolio_backend.entity;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 
@@ -56,10 +56,22 @@ public class ThemeDefinition {
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
     @Builder.Default
-    private List<ThemeAllocation> allocations = new ArrayList<>();
+    private Set<ThemeAllocation> allocations = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("id ASC")
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @Builder.Default
+    private Set<ThemeEquityAllocation> equityAllocations = new LinkedHashSet<>();
 
     public void addAllocation(ThemeAllocation allocation) {
         allocations.add(allocation);
+        allocation.setTheme(this);
+    }
+
+    public void addEquityAllocation(ThemeEquityAllocation allocation) {
+        equityAllocations.add(allocation);
         allocation.setTheme(this);
     }
 }

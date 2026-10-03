@@ -43,6 +43,27 @@ export function PortfoliosPage() {
     }
   };
 
+  const updatePortfolioStatus = async (portfolio, status) => {
+    if (status === portfolio.status) return;
+    try {
+      setError('');
+      const updated = await api.portfolios.update(portfolio.id, {
+        name: portfolio.name,
+        type: portfolio.type,
+        currency: portfolio.currency,
+        benchmark: portfolio.benchmark,
+        exchange: portfolio.exchange,
+        rebalanceFrequency: portfolio.rebalanceFrequency,
+        amount: Number(portfolio.amount || 0),
+        purchaseDate: portfolio.purchaseDate,
+        status
+      });
+      setPortfolios((current) => current.map((item) => item.id === portfolio.id ? updated : item));
+    } catch (e) {
+      setError(e.message || 'Unable to update portfolio status');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -86,15 +107,23 @@ export function PortfoliosPage() {
           </Card>
         ) : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {portfolios.map((portfolio) => {
-            const status = portfolio.holdingsSaved
-              ? { tone: 'success', label: 'Saved' }
-              : { tone: 'info', label: 'In progress' };
+            const currentStatus = portfolio.status || (portfolio.holdingsSaved ? 'ACTIVE' : 'NEW');
 
             return (
               <Card key={portfolio.id} className="overflow-hidden p-0">
                 <div className="relative h-28 border-b border-border bg-gradient-to-br from-muted via-background to-muted p-4">
                   <div className="absolute right-4 top-4">
-                    <Badge variant={status.tone}>{status.label}</Badge>
+                    <label className="sr-only" htmlFor={`portfolio-status-${portfolio.id}`}>Status for {portfolio.name}</label>
+                    <select
+                      id={`portfolio-status-${portfolio.id}`}
+                      value={currentStatus}
+                      onChange={(event) => updatePortfolioStatus(portfolio, event.target.value)}
+                      className="rounded-full border border-border bg-background/95 px-3 py-1.5 text-xs font-semibold shadow-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-80"
+                    >
+                      <option value="NEW">New</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="CLOSED">Closed</option>
+                    </select>
                   </div>
                   <div className="absolute inset-x-4 bottom-4 flex items-end gap-2">
                     {[30, 45, 60, 75, 93].map((height, index) => (
@@ -135,7 +164,7 @@ export function PortfoliosPage() {
                         <Button variant="outline" className="w-full">Holdings</Button>
                       </Link>
                       <Link to={`/portfolios/${portfolio.id}/edit`}>
-                        <Button variant="outline" className="w-full gap-2" aria-label={`Edit ${portfolio.name}`}>
+                        <Button variant="outline" className="w-full gap-2" disabled={portfolio.status === 'CLOSED'} aria-label={`Edit ${portfolio.name}`}>
                           <Pencil className="h-4 w-4" />
                           Edit
                         </Button>

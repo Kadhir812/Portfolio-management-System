@@ -3,6 +3,8 @@ import { Search, TriangleAlert } from 'lucide-react';
 import { api } from '../api/client';
 import { Button } from '../components/ui/button';
 
+const identifierSources = ['NSE', 'BSE', 'AMFI', 'MCX', 'LSE', 'LSEG'];
+
 const requiredFields = [
   { label: 'Stock exchange', value: (security) => security.exchange },
   { label: 'Security symbol', value: (security) => security.symbol },
@@ -32,11 +34,10 @@ export function SecuritiesPage() {
   const [masterError, setMasterError] = useState('');
 
   const missingFields = security ? missingRequiredFields(security) : [];
-  const identifierName = exchange === 'NSE'
-    ? 'ISIN'
-    : exchange
-      ? 'CUPID'
-      : 'Security identifier';
+  const identifierName = exchange === 'LSE' || exchange === 'LSEG' ? 'CUPID' : 'ISIN';
+  const availableSources = [...new Set(masterSecurities
+    .map((record) => record.exchange)
+    .filter((source) => source && identifierSources.includes(source)))].sort();
 
   useEffect(() => {
     let active = true;
@@ -59,7 +60,7 @@ export function SecuritiesPage() {
         ? { symbol: symbol.trim() }
         : {
             exchange: exchange.trim(),
-            [exchange === 'NSE' ? 'isin' : 'cupid']: identifier.trim()
+            [exchange === 'LSE' || exchange === 'LSEG' ? 'cupid' : 'isin']: identifier.trim()
           };
       setSecurity(await api.securities.search(query));
     } catch (searchError) {
@@ -130,8 +131,9 @@ export function SecuritiesPage() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 font-normal"
                 >
                   <option value="">Choose an exchange</option>
-                  <option value="NSE">NSE</option>
-                  <option value="LSE">LSE</option>
+                  {availableSources.map((source) => (
+                    <option key={source} value={source}>{source}</option>
+                  ))}
                 </select>
               </label>
               <label className="block space-y-1.5 text-sm font-medium">
@@ -140,7 +142,7 @@ export function SecuritiesPage() {
                   required
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
-                  placeholder={exchange === 'NSE' ? 'INE009A01021' : 'Enter CUPID'}
+                  placeholder={exchange === 'LSE' || exchange === 'LSEG' ? 'Enter CUPID' : 'IN0000000001'}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 font-normal"
                 />
               </label>

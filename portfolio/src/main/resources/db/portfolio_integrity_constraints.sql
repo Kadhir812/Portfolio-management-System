@@ -327,7 +327,7 @@ WHERE s.gics_industry_code IS NOT NULL AND g.industry_code IS NULL;
 -- Asset-class master and optional security/holding classifications.
 CREATE TABLE IF NOT EXISTS asset_class_master (
         asset_id BIGINT NOT NULL AUTO_INCREMENT,
-        asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+        asset_class ENUM('EQUITY', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
         asset_description VARCHAR(500) NOT NULL,
         sub_asset_class VARCHAR(100) NOT NULL,
         risk VARCHAR(40) NOT NULL,

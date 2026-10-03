@@ -9,4 +9,6 @@ public interface PortfolioTradeRepository extends JpaRepository<PortfolioTrade, 
     List<PortfolioTrade> findByPortfolioIdAndTradeDateLessThanEqualOrderByTradeDateAscIdAsc(Long portfolioId, LocalDate date);
     List<PortfolioTrade> findAllByPortfolioId(Long portfolioId);
     boolean existsByPortfolioId(Long portfolioId);
+
+    void deleteByPortfolioId(Long portfolioId);
 }

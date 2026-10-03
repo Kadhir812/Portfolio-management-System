@@ -11,6 +11,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioType;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import com.hexaware.portfolio.portfolio_backend.security.AppUser;
 
 import jakarta.persistence.Column;
@@ -95,6 +96,24 @@ public class Portfolio {
 
     private boolean holdingsSaved;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PortfolioStatus status;
+
     private Instant createdAt;
     private Instant updatedAt;
+
+    @jakarta.persistence.PrePersist
+    protected void initializeStatus() {
+        if (status == null) {
+            status = holdingsSaved ? PortfolioStatus.ACTIVE : PortfolioStatus.NEW;
+        }
+    }
+
+    @jakarta.persistence.PostLoad
+    protected void migrateLegacyStatus() {
+        if (status == null || (status == PortfolioStatus.NEW && holdingsSaved)) {
+            status = holdingsSaved ? PortfolioStatus.ACTIVE : PortfolioStatus.NEW;
+        }
+    }
 }

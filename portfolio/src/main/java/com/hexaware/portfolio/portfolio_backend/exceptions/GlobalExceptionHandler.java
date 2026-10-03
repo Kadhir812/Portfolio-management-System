@@ -42,6 +42,13 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(AssetClassNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleAssetClassNotFound(
+            AssetClassNotFoundException exception,
+            HttpServletRequest request) {
+        return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(HoldingGuardrailException.class)
     public ResponseEntity<ApiErrorResponse> handleHoldingGuardrail(
             HoldingGuardrailException exception,

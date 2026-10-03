@@ -1,7 +1,7 @@
 package com.hexaware.portfolio.portfolio_backend.entity.enums;
 
 public enum AssetClass { 
-    STOCKS,
+    EQUITY,
     MUTUAL_FUNDS,
     COMMODITIES,
     BONDS,

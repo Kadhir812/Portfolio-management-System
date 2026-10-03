@@ -11,10 +11,12 @@ import org.springframework.stereotype.Service;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
 import com.hexaware.portfolio.portfolio_backend.entity.ThemeAllocation;
+import com.hexaware.portfolio.portfolio_backend.entity.ThemeEquityAllocation;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioHoldingRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.ThemeRepository;
+import com.hexaware.portfolio.security.entity.EquityCategory;
 
 import lombok.AllArgsConstructor;
 
@@ -34,10 +36,12 @@ public class HoldingAllocationService {
                 .collect(Collectors.toSet());
     }
 
-    public void ensureDoesNotExceedTarget(Portfolio portfolio, AssetClass assetClass,
+        public void ensureDoesNotExceedTarget(Portfolio portfolio, AssetClass assetClass,
+                        EquityCategory equityCategory,
             BigDecimal proposedValue, PortfolioHolding excludedHolding) {
         if (portfolio.getTheme() == null) return;
-        ThemeAllocation target = themes.findByTheme(portfolio.getTheme()).orElseThrow().getAllocations().stream()
+                var theme = themes.findByTheme(portfolio.getTheme()).orElseThrow();
+                ThemeAllocation target = theme.getAllocations().stream()
                 .filter(allocation -> allocation.getAssetClass() == assetClass)
                 .findFirst().orElse(null);
         if (target == null) return;
@@ -49,6 +53,29 @@ public class HoldingAllocationService {
                 .multiply(target.getPercentage())
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
         BigDecimal proposedAllocation = currentValue.add(proposedValue);
+
+        if (assetClass == AssetClass.EQUITY && equityCategory != null) {
+            ThemeEquityAllocation categoryTarget = theme.getEquityAllocations().stream()
+                    .filter(allocation -> allocation.getEquityCategory() == equityCategory)
+                    .findFirst().orElse(null);
+            if (categoryTarget != null) {
+                BigDecimal currentCategoryValue = holdings.findByPortfolioId(portfolio.getId()).stream()
+                        .filter(holding -> holding != excludedHolding
+                                && holding.getAssetClass() == AssetClass.EQUITY
+                                && holding.getEquityCategory() == equityCategory)
+                        .map(PortfolioHolding::getValue)
+                        .filter(Objects::nonNull)
+                        .reduce(ZERO, BigDecimal::add);
+                BigDecimal categoryTargetValue = portfolio.getAmount()
+                        .multiply(categoryTarget.getPercentage())
+                        .divide(HUNDRED, 2, RoundingMode.HALF_UP);
+                if (currentCategoryValue.add(proposedValue).compareTo(categoryTargetValue.add(BigDecimal.ONE)) > 0) {
+                    throw new PortfolioValidationException(equityCategory
+                            + " holdings cannot exceed the theme target of "
+                            + categoryTarget.getPercentage() + "%");
+                }
+            }
+        }
 
         if (assetClass == AssetClass.CASH) {
             BigDecimal currentTotal = holdings.findByPortfolioId(portfolio.getId()).stream()

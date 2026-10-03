@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,32 +36,41 @@ public class SecurityMasterController {
     }
 
     @GetMapping("/search")
-    public SecurityMasterResponse search(
+    public ResponseEntity<?> search(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String symbol,
             @RequestParam(required = false) String exchange,
             @RequestParam(required = false) String isin,
             @RequestParam(required = false) String cupid) {
+        if (query != null) {
+            if (query.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search query is required");
+            }
+            return ResponseEntity.ok(securities.search(query.trim()).stream()
+                    .map(SecurityMasterResponse::from)
+                    .toList());
+        }
+
         boolean hasSymbol = symbol != null && !symbol.isBlank();
         boolean hasExchange = exchange != null && !exchange.isBlank();
         boolean hasIsin = isin != null && !isin.isBlank();
         boolean hasCupid = cupid != null && !cupid.isBlank();
 
         if (hasSymbol && !hasExchange && !hasIsin && !hasCupid) {
-            return securities.findFirstBySymbol(symbol.trim())
-                    .map(SecurityMasterResponse::from)
-                    .orElseThrow(() -> notFound("No security found for symbol " + symbol.trim()));
+            return ResponseEntity.ok(securities.findFirstBySymbol(symbol.trim())
+                .map(SecurityMasterResponse::from)
+                .orElseThrow(() -> notFound("No security found for symbol " + symbol.trim())));
         }
-        if (!hasSymbol && hasExchange && hasIsin && !hasCupid
-            && "NSE".equalsIgnoreCase(exchange.trim())) {
-            return securities.findByExchangeAndIsin(exchange.trim(), isin.trim())
-                    .map(SecurityMasterResponse::from)
-                .orElseThrow(() -> notFound("No security found for NSE and ISIN"));
+        if (!hasSymbol && hasExchange && hasIsin && !hasCupid) {
+            return ResponseEntity.ok(securities.findByExchangeAndIsin(exchange.trim(), isin.trim())
+                .map(SecurityMasterResponse::from)
+                .orElseThrow(() -> notFound("No security found for " + exchange.trim() + " and ISIN")));
         }
         if (!hasSymbol && hasExchange && hasCupid && !hasIsin
             && ("LSE".equalsIgnoreCase(exchange.trim()) || "LSEG".equalsIgnoreCase(exchange.trim()))) {
-            return securities.findByExchangeAndCupid(exchange.trim(), cupid.trim())
-                .map(SecurityMasterResponse::from)
-                .orElseThrow(() -> notFound("No security found for LSE and CUPID"));
+            return ResponseEntity.ok(securities.findByExchangeAndCupid(exchange.trim(), cupid.trim())
+            .map(SecurityMasterResponse::from)
+            .orElseThrow(() -> notFound("No security found for LSE and CUPID")));
         }
 
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,

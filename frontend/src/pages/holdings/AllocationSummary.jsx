@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
-export function AllocationSummary({ targetAmount, allocationSummary, allocationMatches, formatAssetClass }) {
+export function AllocationSummary({ targetAmount, allocationSummary, equityCategorySummary, allocationMatches, formatAssetClass }) {
   return (
     <Card>
       <CardHeader>
@@ -31,6 +31,31 @@ export function AllocationSummary({ targetAmount, allocationSummary, allocationM
                     {allocation.difference >= 0 ? '+' : ''}{allocation.difference.toFixed(2)}%
                   </td>
                   <td className="px-3 py-3">₹{allocation.requiredAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-5 overflow-hidden rounded-xl border border-border">
+          <div className="border-b border-border bg-muted px-3 py-3 text-sm font-medium">Equity category targets</div>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="px-3 py-3 font-medium">Equity category</th>
+                <th className="px-3 py-3 font-medium">Target</th>
+                <th className="px-3 py-3 font-medium">Target value</th>
+                <th className="px-3 py-3 font-medium">Current value</th>
+                <th className="px-3 py-3 font-medium">Portfolio %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {equityCategorySummary.map((category) => (
+                <tr key={category.equityCategory} className="border-t border-border">
+                  <td className="px-3 py-3">{category.equityCategory.replaceAll('_', ' ')}</td>
+                  <td className="px-3 py-3">{category.targetPercentage.toFixed(2)}%</td>
+                  <td className="px-3 py-3">₹{category.targetValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                  <td className="px-3 py-3">₹{category.currentValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                  <td className="px-3 py-3">{category.currentPercentage.toFixed(2)}%</td>
                 </tr>
               ))}
             </tbody>

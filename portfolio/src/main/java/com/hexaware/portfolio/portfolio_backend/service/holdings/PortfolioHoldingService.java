@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.hexaware.portfolio.portfolio_backend.dto.*;
 import com.hexaware.portfolio.portfolio_backend.entity.*;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import com.hexaware.portfolio.portfolio_backend.exceptions.*;
 import com.hexaware.portfolio.portfolio_backend.repository.*;
 import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
@@ -76,6 +77,7 @@ public class PortfolioHoldingService {
     @Transactional
     public PortfolioHolding addSecurity(Long portfolioId, AddSecurityRequest request) {
         Portfolio p = ownPortfolio(portfolioId);
+        ensureEditable(p);
         if (request == null || (request.securityId() == null && request.isin() == null) || request.shares() == null || request.shares().signum() <= 0) throw new PortfolioValidationException("A security and positive share quantity are required");
         SecurityDetails s = request.securityId() != null
             ? securities.findById(request.securityId()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(request.securityId())))
@@ -91,7 +93,8 @@ public class PortfolioHoldingService {
         LocalDate transactionDate = p.isHoldingsSaved() ? LocalDate.now() : (p.getPurchaseDate() == null ? LocalDate.now() : p.getPurchaseDate());
         DailyPrice price = securityService.priceOnOrBefore(s.getSecurityId(), transactionDate);
         BigDecimal unitPrice = securityService.priceValue(price);
-        allocationService.ensureDoesNotExceedTarget(p, securityService.assetClass(s.getAssetType()), unitPrice.multiply(request.shares()), null);
+        allocationService.ensureDoesNotExceedTarget(p, securityService.assetClass(s.getAssetType()),
+            s.getEquityCategory(), unitPrice.multiply(request.shares()), null);
         if (existing != null) {
             existing.setSecurityId(s.getSecurityId());
             existing.setIsin(s.getIsin());
@@ -124,6 +127,7 @@ public class PortfolioHoldingService {
     @Transactional
     public Portfolio saveHoldings(Long portfolioId) {
         Portfolio p = ownPortfolio(portfolioId);
+        ensureEditable(p);
         List<PortfolioHolding> rows = holdings.findByPortfolioId(portfolioId);
         if (rows.isEmpty()) throw new PortfolioValidationException("Add at least one holding before saving");
         if (!p.isHoldingsSaved()) {
@@ -133,6 +137,7 @@ public class PortfolioHoldingService {
                         .unitPrice(h.getPrice()).tradeDate(p.getPurchaseDate()).createdAt(Instant.now()).build());
             }
             p.setHoldingsSaved(true); p.setUpdatedAt(Instant.now());
+            p.setStatus(PortfolioStatus.ACTIVE);
             portfolios.save(p);
         }
         return p;
@@ -144,6 +149,7 @@ public class PortfolioHoldingService {
         if (request == null || request.shares() == null || request.shares().signum() <= 0) throw new PortfolioValidationException("Shares must be greater than zero");
         BigDecimal delta = request.shares().subtract(row.getShares());
         Portfolio p = ownPortfolio(portfolioId);
+        ensureEditable(p);
         if (p.isHoldingsSaved() && delta.signum() != 0) {
             SecurityDetails security = securityService.resolveHolding(row);
             LocalDate date = LocalDate.now();
@@ -151,20 +157,29 @@ public class PortfolioHoldingService {
             recordTrade(portfolioId, security, row.getAssetClass(), delta, price, date);
             row.setPrice(price); row.setPriceDate(securityService.priceOnOrBefore(security.getSecurityId(), date).getTradeDate());
         }
-        allocationService.ensureDoesNotExceedTarget(p, row.getAssetClass(), row.getPrice().multiply(request.shares()), row);
+        allocationService.ensureDoesNotExceedTarget(p, row.getAssetClass(), row.getEquityCategory(),
+            row.getPrice().multiply(request.shares()), row);
         row.setShares(request.shares()); row.setValue(row.getPrice().multiply(row.getShares()).setScale(2, RoundingMode.HALF_UP)); row.setUpdatedAt(Instant.now());
         return holdings.save(row);
     }
     @Transactional
     public void delete(Long portfolioId, Long holdingId) {
         PortfolioHolding row = getById(portfolioId, holdingId);
-        if (ownPortfolio(portfolioId).isHoldingsSaved()) {
+        Portfolio portfolio = ownPortfolio(portfolioId);
+        ensureEditable(portfolio);
+        if (portfolio.isHoldingsSaved()) {
             SecurityDetails security = securityService.resolveHolding(row);
             LocalDate date = LocalDate.now();
             BigDecimal price = securityService.priceValue(securityService.priceOnOrBefore(security.getSecurityId(), date));
             recordTrade(portfolioId, security, row.getAssetClass(), row.getShares().negate(), price, date);
         }
         holdings.delete(row);
+    }
+
+    private void ensureEditable(Portfolio portfolio) {
+        if (portfolio.getStatus() == PortfolioStatus.CLOSED) {
+            throw new PortfolioValidationException("Closed portfolios are read-only");
+        }
     }
 
     @Transactional

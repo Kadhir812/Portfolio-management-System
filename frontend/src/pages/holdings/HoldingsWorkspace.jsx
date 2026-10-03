@@ -11,6 +11,7 @@ export function HoldingsWorkspace({
   targetAmount,
   addSecurityProps,
   allocationSummary,
+  equityCategorySummary,
   allocationMatches,
   formatAssetClass,
   holdingsTableProps
@@ -26,6 +27,7 @@ export function HoldingsWorkspace({
         <AllocationSummary
           targetAmount={targetAmount}
           allocationSummary={allocationSummary}
+          equityCategorySummary={equityCategorySummary}
           allocationMatches={allocationMatches}
           formatAssetClass={formatAssetClass}
         />

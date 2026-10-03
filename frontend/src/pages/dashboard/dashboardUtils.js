@@ -4,7 +4,7 @@ export const money = (value, currency = 'INR') => new Intl.NumberFormat('en-IN',
   maximumFractionDigits: 2
 }).format(Number(value || 0));
 
-export const label = (value) => value === 'STOCKS'
+export const label = (value) => value === 'EQUITY'
   ? 'Equity'
   : (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 

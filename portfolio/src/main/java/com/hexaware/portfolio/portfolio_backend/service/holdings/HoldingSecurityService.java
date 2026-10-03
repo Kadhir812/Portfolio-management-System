@@ -53,7 +53,7 @@ public class HoldingSecurityService {
 
     public AssetClass assetClass(AssetType type) {
         return switch (type) {
-            case EQUITY -> AssetClass.STOCKS;
+            case EQUITY -> AssetClass.EQUITY;
             case MUTUAL -> AssetClass.MUTUAL_FUNDS;
             case COMMODITY -> AssetClass.COMMODITIES;
             case BOND -> AssetClass.BONDS;
@@ -77,19 +77,10 @@ public class HoldingSecurityService {
         if (price == null) {
             throw new PortfolioValidationException("Historical price is missing or invalid");
         }
-        BigDecimal[] candidates = {
-                price.getValuationPrice(),
-                price.getClosePrice(),
-                price.getNav(),
-                price.getSpotPrice(),
-                price.getLastPrice()
-        };
-        for (BigDecimal candidate : candidates) {
-            if (candidate != null && candidate.signum() > 0) {
-                return candidate;
-            }
+        if (price.getValuationPrice() == null || price.getValuationPrice().signum() <= 0) {
+            throw new PortfolioValidationException("Normalized valuation price is missing or invalid");
         }
-        throw new PortfolioValidationException("Historical price is missing or invalid");
+        return price.getValuationPrice();
     }
 
     public Long tradeSecurityId(PortfolioTrade trade) {
