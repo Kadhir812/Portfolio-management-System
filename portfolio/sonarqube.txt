@@ -1,0 +1,148 @@
+Set-Location "C:\New folder\Portfolio-management-System\portfolio"
+
+Remove-Item ".\target\sonar" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item ".\.scannerwork" -Recurse -Force -ErrorAction SilentlyContinue
+
+$env:SONAR_TOKEN = Read-Host "Paste your new SonarCloud token"
+
+if ([string]::IsNullOrWhiteSpace($env:SONAR_TOKEN)) {
+    throw "SONAR_TOKEN is empty."
+}
+
+try {
+    .\mvnw.cmd clean verify `
+        org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar `
+        "-Dsonar.organization=kadhir812" `
+        "-Dsonar.projectKey=Kadhir812_Portfolio-management-System" `
+        "-Dsonar.host.url=https://sonarcloud.io" `
+        "-Dsonar.token=$env:SONAR_TOKEN" `
+        "-e"
+}
+finally {
+    Remove-Item Env:SONAR_TOKEN -ErrorAction SilentlyContinue
+}
+
+
+
+//caching 
+Yes. **After coverage and SonarCloud findings are addressed, measure API performance before optimizing queries or adding caching.**
+
+Recommended order:
+
+```text
+SonarCloud analysis
+        ↓
+Fix Blocker/Critical findings
+        ↓
+Confirm coverage >70%
+        ↓
+Measure API latency
+        ↓
+Identify slow endpoints and SQL queries
+        ↓
+Optimize queries/indexes/code
+        ↓
+Measure again
+        ↓
+Add targeted caching only if still necessary
+```
+
+## Why measure first?
+
+Without a baseline, query optimization is guesswork. A slow API may be caused by:
+
+- Missing database indexes.
+- N+1 queries.
+- Large response payloads.
+- Excessive serialization.
+- Slow business logic.
+- Multiple frontend requests.
+- Database connection delays.
+- External API calls.
+- Incorrect caching assumptions.
+
+Caching should not be the first optimization because it can hide an inefficient query and create stale portfolio data.
+
+## What to measure
+
+Measure representative endpoints, including:
+
+```text
+GET /api/portfolios
+GET /api/portfolios/{id}
+GET /api/portfolios/{id}/holdings
+GET /api/portfolios/{id}/holdings/valuation
+GET /api/portfolios/{id}/holdings/eligible-securities
+GET /api/securities/search
+POST /api/portfolios/{id}/holdings/rebalance
+```
+
+For each endpoint, record:
+
+- Average latency.
+- Median latency, or p50.
+- p95 latency.
+- p99 latency.
+- Error rate.
+- Response size.
+- Number of SQL queries.
+- Slowest SQL query.
+- Database time versus application time.
+
+Your requirement is:
+
+```text
+Each API response should be less than 2 seconds.
+```
+
+Use p95 rather than one successful request as the acceptance criterion. For example:
+
+```text
+p95 latency < 2 seconds
+error rate = 0%
+```
+
+## Important distinction
+
+For read APIs, measure:
+
+```text
+GET /valuation
+GET /holdings
+GET /eligible-securities
+```
+
+For write APIs, measure carefully because they change data:
+
+```text
+POST /rebalance
+POST /holdings
+PUT /holdings
+```
+
+Use test data or a controlled test portfolio for write performance testing. Do not repeatedly run rebalance tests against production-like data without cleanup.
+
+## Then optimize based on evidence
+
+Examples:
+
+- If SQL time is high: inspect query plans and add targeted indexes.
+- If query count is high: fix N+1 loading.
+- If payloads are too large: use DTOs, pagination, or projections.
+- If computation is slow: optimize service logic.
+- If the same stable data is repeatedly requested: consider targeted caching.
+- If current valuation is slow: optimize queries first; avoid caching mutable financial values until invalidation is designed.
+
+## Final validation
+
+After optimization:
+
+```text
+Run tests
+→ Run SonarCloud
+→ Measure latency again
+→ Confirm p95 < 2 seconds
+→ Confirm no stale portfolio/cash/rebalance data
+```
+
+So yes: **coverage first, then performance baseline, then query optimization, and caching only if the measurements justify it.**
