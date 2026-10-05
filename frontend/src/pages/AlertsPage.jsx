@@ -1,86 +1,76 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRightLeft, BellRing } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRightLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { GridCard } from '../components/grid/GridCard';
+import { actionsCol, assetClassCol, driftCol, pctCol, textCol } from '../components/grid/columns';
+import { Notice } from '../components/Notice';
+import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/ui/button';
-
-const label = (value) => (value || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+import { formatDate } from '../lib/format';
 
 export function AlertsPage() {
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [unavailableCount, setUnavailableCount] = useState(0);
+  const [skipped, setSkipped] = useState(0);
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
+    (async () => {
       try {
-        const portfolios = await api.portfolios.list();
-        const savedPortfolios = portfolios.filter((portfolio) => portfolio.holdingsSaved);
-        const results = await Promise.allSettled(
-          savedPortfolios.map(async (portfolio) => ({
-            portfolio,
-            valuation: await api.holdings.valuation(portfolio.id)
-          }))
-        );
+        const saved = (await api.portfolios.list()).filter((p) => p.holdingsSaved);
+        const results = await Promise.allSettled(saved.map(async (portfolio) => ({ portfolio, valuation: await api.holdings.valuation(portfolio.id) })));
         if (!active) return;
-
-        const successful = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
-        setAlerts(successful.flatMap(({ portfolio, valuation }) =>
-          (valuation.allocations || []).filter((allocation) => allocation.alert).map((allocation) => ({
-            portfolioId: portfolio.id,
-            portfolioName: portfolio.name,
-            tradeDate: valuation.requestedDate,
-            ...allocation
-          }))
-        ));
-        setUnavailableCount(results.length - successful.length);
-      } catch (loadError) {
-        if (active) setError(loadError.message || 'Unable to load allocation alerts');
+        const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+        setAlerts(ok.flatMap(({ portfolio, valuation }) => (valuation.allocations || []).filter((a) => a.alert).map((a) => ({
+          portfolioId: portfolio.id,
+          portfolio: portfolio.name,
+          date: valuation.requestedDate,
+          assetClass: a.assetClass,
+          targetPct: Number(a.targetPercentage),
+          currentPct: Number(a.currentPercentage),
+          driftPp: Number(a.driftPercentagePoints)
+        }))));
+        setSkipped(results.length - ok.length);
+      } catch (e) {
+        if (active) setError(e.message || 'Unable to load alerts');
       } finally {
         if (active) setLoading(false);
       }
-    };
-
-    load();
+    })();
     return () => { active = false; };
   }, []);
 
-  return <div className="mx-auto max-w-5xl space-y-6">
-    <div>
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Fund manager</p>
-      <h2 className="mt-1 flex items-center gap-2 text-3xl font-bold"><BellRing className="h-7 w-7" />Allocation alerts</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Portfolios with asset-class drift greater than 5 percentage points.</p>
-    </div>
+  const columns = useMemo(() => [
+    textCol('portfolio', 'Portfolio', { cellClass: 'font-semibold', minWidth: 200 }),
+    assetClassCol(),
+    pctCol('targetPct', 'Target'),
+    pctCol('currentPct', 'Current'),
+    driftCol('driftPp', 'Drift', { sort: 'desc', comparator: (a, b) => Math.abs(a) - Math.abs(b) }),
+    textCol('date', 'As of', { valueFormatter: ({ value }) => formatDate(value) }),
+    actionsCol(({ data }) => (
+      <Button size="sm" variant="outline" onClick={() => navigate(`/portfolios/${data.portfolioId}/rebalance?date=${data.date}`)}><ArrowRightLeft /> Rebalance</Button>
+    ), 140)
+  ], [navigate]);
 
-    {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
-    {unavailableCount > 0 && <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">Could not check {unavailableCount} saved {unavailableCount === 1 ? 'portfolio' : 'portfolios'}.</div>}
-
-    {loading ? <p className="text-sm text-muted-foreground">Checking portfolio allocations…</p> : !error && alerts.length === 0 && unavailableCount === 0 ? (
-      <div className="rounded-md border border-border bg-card px-5 py-8 text-center">
-        <p className="font-medium">No allocation drift alerts</p>
-        <p className="mt-1 text-sm text-muted-foreground">All checked asset classes are within the 5 percentage-point limit.</p>
-      </div>
-    ) : alerts.length > 0 ? (
-      <div className="divide-y divide-border border-y border-border">
-        {alerts.map((alert) => {
-          const drift = Number(alert.driftPercentagePoints);
-          return <article key={`${alert.portfolioId}-${alert.assetClass}`} className="flex flex-wrap items-center justify-between gap-4 py-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-amber-600" />
-              <div>
-                <h3 className="font-semibold">{alert.portfolioName} · {label(alert.assetClass)}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Target {Number(alert.targetPercentage).toFixed(1)}% · Current {Number(alert.currentPercentage).toFixed(1)}%</p>
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{drift > 0 ? '+' : ''}{drift.toFixed(1)} percentage points</p>
-              </div>
-            </div>
-            <Link to={`/portfolios/${alert.portfolioId}/rebalance?date=${alert.tradeDate}`}>
-              <Button variant="secondary" className="gap-2"><ArrowRightLeft className="h-4 w-4" />Review rebalance</Button>
-            </Link>
-          </article>;
-        })}
-      </div>
-    ) : null}
-  </div>;
+  return (
+    <>
+      <PageHeader title="Alerts" description="Asset classes that have drifted more than 5 percentage points from their theme target." />
+      <Notice tone="error">{error}</Notice>
+      {skipped > 0 && <Notice tone="warning">Could not check {skipped} saved {skipped === 1 ? 'portfolio' : 'portfolios'}.</Notice>}
+      <GridCard
+        title="Allocation drift alerts"
+        subtitle={loading ? 'Checking portfolios…' : `${alerts.length} ${alerts.length === 1 ? 'alert' : 'alerts'} across your saved portfolios.`}
+        exportName="drift-alerts"
+        rowData={alerts}
+        columnDefs={columns}
+        loading={loading}
+        getRowId={({ data }) => `${data.portfolioId}-${data.assetClass}`}
+        height={420}
+        emptyMessage="No drift alerts. Every checked asset class is within 5 pp of its target."
+      />
+    </>
+  );
 }

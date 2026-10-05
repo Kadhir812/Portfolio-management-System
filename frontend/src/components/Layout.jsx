@@ -1,88 +1,85 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { BriefcaseBusiness, LayoutDashboard, BellRing, Database, LogOut } from 'lucide-react';
-import { Card } from './ui/card';
+import { BellRing, BriefcaseBusiness, Database, LayoutDashboard, Layers, LogOut, Scale, Wallet } from 'lucide-react';
+import { Brand } from './AuthShell';
+import { ColorModeToggle } from './ColorModeToggle';
+import { cn } from '../lib/utils';
 
-const navItems = [
-  { label: 'Portfolios', to: '/portfolios', icon: BriefcaseBusiness },
+const mainNav = [
+  { label: 'Portfolios', to: '/portfolios', icon: BriefcaseBusiness, end: true },
+  { label: 'Themes', to: '/themes', icon: Layers },
   { label: 'Securities', to: '/securities', icon: Database },
-  { label: 'Dashboard', to: '/portfolios/overview', icon: LayoutDashboard },
   { label: 'Alerts', to: '/alerts', icon: BellRing }
 ];
 
-export function Layout({ children }) {
-  const location = useLocation();
-  const portfolioMatch = location.pathname.match(/^\/portfolios\/([^/]+)/);
-  const dashboardPath = portfolioMatch ? `/portfolios/${portfolioMatch[1]}` : '/portfolios/overview';
-  const currentNavItems = navItems.map((item) =>
-    item.label === 'Dashboard' ? { ...item, to: dashboardPath } : item
-  );
+const linkClass = ({ isActive }) => cn(
+  'flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition',
+  isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+);
 
-  const logout = () => {
+function currentUserName() {
+  try {
+    return JSON.parse(localStorage.getItem('portfolio_user'))?.username || 'Account';
+  } catch {
+    return 'Account';
+  }
+}
+
+export function Layout({ children }) {
+  const { pathname } = useLocation();
+  // Inside a specific portfolio, show its own shortcuts
+  const portfolioId = pathname.match(/^\/portfolios\/(\d+)/)?.[1];
+  const portfolioNav = portfolioId ? [
+    { label: 'Dashboard', to: `/portfolios/${portfolioId}`, icon: LayoutDashboard, end: true },
+    { label: 'Holdings', to: `/portfolios/${portfolioId}/holdings`, icon: Wallet },
+    { label: 'Rebalance', to: `/portfolios/${portfolioId}/rebalance`, icon: Scale }
+  ] : [];
+
+  const signOut = () => {
     localStorage.removeItem('portfolio_token');
     localStorage.removeItem('portfolio_user');
     window.location.href = '/login';
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
-        <aside className="w-72 border-r border-border bg-card p-5 shadow-sm">
-          <div className="mb-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-background">
-                PM
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">System</p>
-                <h1 className="text-lg font-semibold">Portfolio Manager</h1>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen lg:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card/60 p-4 lg:sticky lg:top-0 lg:flex lg:h-screen">
+        <div className="px-2 py-3"><Brand /></div>
+        <nav className="mt-6 space-y-1" aria-label="Main">
+          {mainNav.map(({ label, to, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={linkClass}><Icon className="h-4 w-4" />{label}</NavLink>
+          ))}
+        </nav>
 
-          <nav className="space-y-2">
-            {currentNavItems.map(({ label, to, icon: Icon }) => (
-              <NavLink
-                key={label}
-                to={to}
-                end={label === 'Portfolios'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`
-                }
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </NavLink>
+        {portfolioNav.length > 0 && (
+          <nav className="mt-6 space-y-1 border-t border-border pt-4" aria-label="This portfolio">
+            <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">This portfolio</p>
+            {portfolioNav.map(({ label, to, icon: Icon, end }) => (
+              <NavLink key={to} to={to} end={end} className={linkClass}><Icon className="h-4 w-4" />{label}</NavLink>
             ))}
           </nav>
+        )}
 
-          <Card className="mt-10 p-4">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Portfolio health</p>
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-2xl font-bold">84%</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400">+3.2% this month</p>
-              </div>
-              <div className="h-12 w-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-500" />
-            </div>
-          </Card>
-
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-5 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border px-2 pt-4">
+          <span className="truncate text-sm font-medium">{currentUserName()}</span>
+          <button type="button" onClick={signOut} title="Sign out" aria-label="Sign out" className="rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground">
             <LogOut className="h-4 w-4" />
-            Sign out
           </button>
-        </aside>
+        </div>
+      </aside>
 
-        <main className="flex-1 overflow-x-hidden bg-background p-6">
-          {children}
-        </main>
+      <div className="min-w-0 flex-1">
+        {/* compact navigation for small screens */}
+        <header className="flex items-center gap-2 overflow-x-auto border-b border-border bg-card/60 px-3 py-2 lg:hidden">
+          {[...mainNav, ...portfolioNav].map(({ label, to, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={linkClass}><Icon className="h-4 w-4" />{label}</NavLink>
+          ))}
+          <span className="ml-auto flex items-center gap-1"><ColorModeToggle /><button type="button" onClick={signOut} className="rounded-md p-2 text-muted-foreground" aria-label="Sign out"><LogOut className="h-4 w-4" /></button></span>
+        </header>
+        {/* top bar, desktop: colour mode switch in the top right corner */}
+        <div className="sticky top-0 z-20 hidden h-14 items-center justify-end border-b border-border bg-background/85 px-8 backdrop-blur lg:flex">
+          <ColorModeToggle />
+        </div>
+        <main className="mx-auto w-full max-w-[1500px] space-y-6 overflow-x-hidden p-4 sm:p-6 lg:px-8 lg:pb-8 lg:pt-6">{children}</main>
       </div>
     </div>
   );
