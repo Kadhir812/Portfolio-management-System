@@ -157,9 +157,10 @@ export function HoldingsPage() {
     ?.map((allocation) => allocation.assetClass)
     .filter((assetClass) => assetClass !== 'CASH') || [];
   const availableAssetClasses = [...new Set(investableSecurities.map((security) => security.assetClass))];
+  const masterAssetClasses = Object.keys(assetClassMetadata).filter((assetClass) => assetClass !== 'CASH');
   const selectableAssetClasses = themeAssetClasses.length > 0
-    ? themeAssetClasses.filter((assetClass) => availableAssetClasses.includes(assetClass))
-    : availableAssetClasses;
+    ? themeAssetClasses
+    : [...new Set([...masterAssetClasses, ...availableAssetClasses])];
   const visibleSecurities = selectedAssetClass
     ? investableSecurities.filter((security) => security.assetClass === selectedAssetClass)
     : investableSecurities;

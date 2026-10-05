@@ -123,7 +123,11 @@ export function AddSecurityForm({
                       </span>
                     </button>
                   )) : (
-                    <p className="px-3 py-2 text-sm text-muted-foreground">No matching securities.</p>
+                    <p className="px-3 py-2 text-sm text-muted-foreground">
+                      {visibleSecurities.length > 0
+                        ? 'No matching securities.'
+                        : 'No eligible securities for this asset on the portfolio date.'}
+                    </p>
                   )}
                 </div>
               ) : null}
