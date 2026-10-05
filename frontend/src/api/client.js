@@ -1,17 +1,31 @@
 import axios from 'axios';
 
+let csrfToken;
+
 const client = axios.create({
 	baseURL: import.meta.env.VITE_API_URL || '/api',
 	headers: {
 		'Content-Type': 'application/json'
 	},
+	withCredentials: true,
 	timeout: 10000
 });
 
-client.interceptors.request.use((config) => {
+const csrfMethods = new Set(['post', 'put', 'patch', 'delete']);
+
+const loadCsrfToken = async () => {
+	const response = await client.get('/auth/csrf');
+	csrfToken = response.data.token;
+	return csrfToken;
+};
+
+client.interceptors.request.use(async (config) => {
 	const token = localStorage.getItem('portfolio_token');
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`;
+	}
+	if (csrfMethods.has(config.method?.toLowerCase()) && config.url !== '/auth/csrf') {
+		config.headers['X-XSRF-TOKEN'] = csrfToken || await loadCsrfToken();
 	}
 	return config;
 });
@@ -44,8 +58,12 @@ client.interceptors.response.use(
 
 export const api = {
 	auth: {
-		register: async (payload) => (await client.post('/auth/register', payload)).data,
-		login: async (payload) => (await client.post('/auth/login', payload)).data
+		register: async (payload) => {
+			return (await client.post('/auth/register', payload)).data;
+		},
+		login: async (payload) => {
+			return (await client.post('/auth/login', payload)).data;
+		}
 	},
 	portfolios: {
 		list: async () => (await client.get('/portfolios')).data,
