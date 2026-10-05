@@ -1,4 +1,5 @@
--- Portfolio seed: 25 linked securities and weekday prices for 2026-01-01 through 2026-10-02.
+-- Portfolio seed: 29 linked securities and weekday prices for 2026-01-01 through
+-- 2026-10-02, the latest available NSE market day before 2026-10-05.
 -- The prices are deterministic synthetic demo data, not verified market history.
 -- MySQL 8+.
 USE portfolio_db;
@@ -132,6 +133,10 @@ INSERT INTO tmp_seed_securities VALUES
 ('SBIN','EQUITY','STOCKS','STOCKS','IN0000000006','CUPID-SBIN','EQ','State Bank of India','Public-sector commercial bank','NSE','INR','India','Indian Equity','HIGH','LARGE_CAP','402010',900.000000,0.0017),
 ('ITC','EQUITY','STOCKS','STOCKS','IN0000000007','CUPID-ITC','EQ','ITC','Consumer products, hotels and paper company','NSE','INR','India','Indian Equity','MEDIUM','LARGE_CAP','551040',500.000000,0.0010),
 ('BHARTIARTL','EQUITY','STOCKS','STOCKS','IN0000000009','CUPID-BHARTIARTL','EQ','Bharti Airtel','Telecommunications services provider','NSE','INR','India','Indian Equity','HIGH','LARGE_CAP','452020',1900.000000,0.0015),
+('POLYCAB','EQUITY','STOCKS','STOCKS','IN0000000026','CUPID-POLYCAB','EQ','Polycab India','Cables, wires and electrical products manufacturer','NSE','INR','India','Indian Equity','HIGH','MID_CAP','202010',6500.000000,0.0020),
+('DIXON','EQUITY','STOCKS','STOCKS','IN0000000027','CUPID-DIXON','EQ','Dixon Technologies','Electronics manufacturing services provider','NSE','INR','India','Indian Equity','HIGH','MID_CAP','452010',12000.000000,0.0025),
+('KAYNES','EQUITY','STOCKS','STOCKS','IN0000000028','CUPID-KAYNES','EQ','Kaynes Technology India','Internet of Things and electronics manufacturing company','NSE','INR','India','Indian Equity','HIGH','SMALL_CAP','452010',5200.000000,0.0030),
+('TANLA','EQUITY','STOCKS','STOCKS','IN0000000029','CUPID-TANLA','EQ','Tanla Platforms','Cloud communications and digital platform provider','NSE','INR','India','Indian Equity','HIGH','SMALL_CAP','451010',900.000000,0.0028),
 ('HDFCFLEXICAP','MUTUAL','MUTUAL_FUNDS','Stock Funds','IN0000000011','CUPID-HDFCFLEXI','MF','HDFC Flexi Cap Fund','Diversified equity mutual fund','AMFI','INR','India','Indian Mutual Funds','HIGH',NULL,'451010',180.000000,0.0008),
 ('PARAGFLEXI','MUTUAL','MUTUAL_FUNDS','Stock Funds','IN0000000012','CUPID-PARAGFLEXI','MF','Parag Parikh Flexi Cap Fund','Diversified equity mutual fund','AMFI','INR','India','Indian Mutual Funds','HIGH',NULL,'403010',95.000000,0.0009),
 ('HDFCBALADV','MUTUAL','MUTUAL_FUNDS','Balanced Funds','IN0000000014','CUPID-HDFCBALADV','MF','HDFC Balanced Advantage Fund','Hybrid mutual fund investing across equity and fixed income','AMFI','INR','India','Indian Mutual Funds','MEDIUM',NULL,'402010',350.000000,0.0007),
@@ -276,6 +281,20 @@ FROM weekdays w
 CROSS JOIN security_details s
 JOIN tmp_seed_securities t ON t.symbol = s.symbol
 ;
+
+-- Verification: each new equity category should have 2 securities and 197
+-- weekday prices (788 rows per category) covering the complete seed range.
+SELECT s.equity_category,
+       COUNT(DISTINCT s.security_id) AS security_count,
+       COUNT(p.id) AS daily_price_count,
+       MIN(p.trade_date) AS first_trade_date,
+       MAX(p.trade_date) AS last_trade_date
+FROM security_details s
+LEFT JOIN daily_prices p ON p.security_id = s.security_id
+    AND p.trade_date BETWEEN '2026-01-01' AND '2026-10-02'
+WHERE s.symbol IN ('POLYCAB', 'DIXON', 'KAYNES', 'TANLA')
+GROUP BY s.equity_category
+ORDER BY s.equity_category;
 
 DROP TEMPORARY TABLE tmp_seed_securities;
 COMMIT;

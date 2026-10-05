@@ -254,7 +254,6 @@ public class PortfolioHoldingService {
         Map<Long, BigDecimal> requestedTrades = new LinkedHashMap<>();
         for (RebalanceRequest.TradeOrder order : request.trades()) {
             if (order == null || order.signedShares() == null) continue;
-            if (order.signedShares().signum() > 0) throw new PortfolioValidationException("Rebalance accepts sell orders only; add purchases from holdings separately");
             Long securityId = order.securityId();
             if (securityId == null && order.isin() != null) {
                 securityId = securities.findByIsin(order.isin())
@@ -262,14 +261,63 @@ public class PortfolioHoldingService {
             }
             if (securityId != null) requestedTrades.merge(securityId, order.signedShares(), BigDecimal::add);
         }
+        Set<AssetClass> allowedAssetClasses = allocationService.allowedAssetClasses(p);
+        BigDecimal saleProceeds = ZERO;
+        BigDecimal purchaseValue = ZERO;
+        Map<Long, BigDecimal> orderPrices = new HashMap<>();
+        Map<AssetClass, BigDecimal> orderValuesByClass = new EnumMap<>(AssetClass.class);
         for (var order : requestedTrades.entrySet()) {
             BigDecimal signedShares = order.getValue();
             if (signedShares.signum() == 0) continue;
             SecurityDetails security = securities.findById(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(order.getKey())));
+            AssetClass assetClass = securityService.assetClass(security.getAssetType());
+            if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass)) {
+                throw new PortfolioValidationException("Security " + security.getSymbol()
+                        + " is not part of the portfolio's investment theme");
+            }
             BigDecimal afterTrade = quantitiesAtTradeDate.getOrDefault(order.getKey(), ZERO).add(signedShares);
             if (afterTrade.signum() < 0) throw new PortfolioValidationException("Cannot sell more shares than the portfolio owns: " + security.getSymbol());
             DailyPrice price = securityService.priceOnOrBefore(security.getSecurityId(), request.tradeDate());
-            recordTrade(portfolioId, security, securityService.assetClass(security.getAssetType()), signedShares, securityService.priceValue(price), request.tradeDate());
+            BigDecimal unitPrice = securityService.priceValue(price);
+            orderPrices.put(order.getKey(), unitPrice);
+            BigDecimal orderValue = signedShares.multiply(unitPrice);
+            orderValuesByClass.merge(assetClass, orderValue, BigDecimal::add);
+            if (signedShares.signum() < 0) saleProceeds = saleProceeds.add(orderValue.abs());
+            else purchaseValue = purchaseValue.add(orderValue);
+        }
+        BigDecimal investedValue = ZERO;
+        Map<AssetClass, BigDecimal> currentValuesByClass = new EnumMap<>(AssetClass.class);
+        for (PortfolioHolding holding : holdings.findByPortfolioId(portfolioId)) {
+            SecurityDetails security = securityService.resolveHolding(holding);
+            DailyPrice price = securityService.priceOnOrBefore(security.getSecurityId(), request.tradeDate());
+            BigDecimal holdingValue = holding.getShares().multiply(securityService.priceValue(price));
+            investedValue = investedValue.add(holdingValue);
+            currentValuesByClass.merge(holding.getAssetClass(), holdingValue, BigDecimal::add);
+        }
+        BigDecimal currentTotalValue = investedValue.max(p.getAmount());
+        if (p.getTheme() != null) {
+            for (ThemeAllocation target : themes.findByTheme(p.getTheme()).orElseThrow().getAllocations()) {
+                BigDecimal projectedValue = currentValuesByClass.getOrDefault(target.getAssetClass(), ZERO)
+                        .add(orderValuesByClass.getOrDefault(target.getAssetClass(), ZERO));
+                BigDecimal targetValue = currentTotalValue.multiply(target.getPercentage())
+                        .divide(HUNDRED, 6, RoundingMode.HALF_UP);
+                if (projectedValue.compareTo(targetValue.add(BigDecimal.ONE)) > 0) {
+                    throw new PortfolioValidationException(target.getAssetClass()
+                            + " rebalance value cannot exceed the theme target of "
+                            + target.getPercentage() + "%");
+                }
+            }
+        }
+        BigDecimal availableCash = p.getAmount().subtract(investedValue).max(ZERO).add(saleProceeds);
+        if (purchaseValue.compareTo(availableCash) > 0) {
+            throw new PortfolioValidationException("Rebalance purchases exceed available cash and sale proceeds");
+        }
+        for (var order : requestedTrades.entrySet()) {
+            BigDecimal signedShares = order.getValue();
+            if (signedShares.signum() == 0) continue;
+            SecurityDetails security = securities.findById(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(order.getKey())));
+            recordTrade(portfolioId, security, securityService.assetClass(security.getAssetType()), signedShares,
+                    orderPrices.get(order.getKey()), request.tradeDate());
         }
         refreshHoldingSnapshots(portfolioId);
     }
