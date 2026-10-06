@@ -5,12 +5,16 @@ import java.util.List;
 import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hexaware.portfolio.portfolio_backend.dto.CreatePortfolioRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioNotFoundException;
 import com.hexaware.portfolio.portfolio_backend.exceptions.PortfolioValidationException;
+import com.hexaware.portfolio.portfolio_backend.repository.PortfolioHoldingRepository;
 import com.hexaware.portfolio.portfolio_backend.repository.PortfolioRepository;
+import com.hexaware.portfolio.portfolio_backend.repository.PortfolioTradeRepository;
 import com.hexaware.portfolio.portfolio_backend.security.AppUser;
 import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
 
@@ -21,6 +25,8 @@ import lombok.AllArgsConstructor;
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
+    private final PortfolioHoldingRepository holdings;
+    private final PortfolioTradeRepository trades;
     private final CurrentUserService currentUserService;
 
     public Portfolio create(CreatePortfolioRequest request) {
@@ -37,6 +43,7 @@ public class PortfolioService {
                 .exchange(request.exchange())
                 .rebalanceFrequency(request.rebalanceFrequency())
                 .amount(request.amount())
+                .status(PortfolioStatus.NEW)
                 .purchaseDate(request.purchaseDate() == null ? LocalDate.now() : request.purchaseDate())
                 .theme(null)
                 .createdAt(now)
@@ -47,7 +54,8 @@ public class PortfolioService {
     }
 
     public List<Portfolio> getAll() {
-        return portfolioRepository.findAllByOwnerUsername(currentUserService.getCurrentUser().getUsername());
+        return portfolioRepository.findAllByOwnerUsername(currentUserService.getCurrentUser().getUsername())
+            .stream().peek(this::normalizeStatus).toList();
     }
 
     public Portfolio getById(Long portfolioId) {
@@ -58,6 +66,9 @@ public class PortfolioService {
         validate(request);
 
         Portfolio portfolio = findPortfolio(portfolioId);
+        if (portfolio.getStatus() == PortfolioStatus.CLOSED) {
+            throw new PortfolioValidationException("Closed portfolios cannot be updated");
+        }
         portfolio.setName(request.name().trim());
         portfolio.setType(request.type());
         portfolio.setCurrency(request.currency());
@@ -72,18 +83,42 @@ public class PortfolioService {
         return portfolioRepository.save(portfolio);
     }
 
+    @Transactional
+    public Portfolio close(Long portfolioId) {
+        Portfolio portfolio = findPortfolio(portfolioId);
+        if (portfolio.getStatus() == PortfolioStatus.CLOSED) return portfolio;
+        portfolio.setStatus(PortfolioStatus.CLOSED);
+        portfolio.setUpdatedAt(Instant.now());
+        return portfolioRepository.save(portfolio);
+    }
+
+    @Transactional
     public void delete(Long portfolioId) {
-        portfolioRepository.delete(findPortfolio(portfolioId));
+        Portfolio portfolio = findPortfolio(portfolioId);
+        if (portfolio.getStatus() != PortfolioStatus.CLOSED) {
+            throw new PortfolioValidationException("Close the portfolio before deleting it");
+        }
+        holdings.deleteByPortfolioId(portfolioId);
+        trades.deleteByPortfolioId(portfolioId);
+        portfolioRepository.delete(portfolio);
     }
 
     private Portfolio findPortfolio(Long portfolioId) {
         if (portfolioId == null) {
             throw new PortfolioValidationException("Portfolio id is required");
         }
-        return portfolioRepository.findByIdAndOwnerUsername(
+        Portfolio portfolio = portfolioRepository.findByIdAndOwnerUsername(
                 portfolioId,
                 currentUserService.getCurrentUser().getUsername())
                 .orElseThrow(() -> new PortfolioNotFoundException(portfolioId));
+        normalizeStatus(portfolio);
+        return portfolio;
+    }
+
+    private void normalizeStatus(Portfolio portfolio) {
+        if (portfolio.getStatus() == null) {
+            portfolio.setStatus(portfolio.isHoldingsSaved() ? PortfolioStatus.ACTIVE : PortfolioStatus.NEW);
+        }
     }
 
     private void validate(CreatePortfolioRequest request) {

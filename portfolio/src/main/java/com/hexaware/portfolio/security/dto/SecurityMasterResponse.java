@@ -1,6 +1,7 @@
 package com.hexaware.portfolio.security.dto;
 
 import com.hexaware.portfolio.security.entity.SecurityDetails;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.EquityCategory;
 
 public record SecurityMasterResponse(
         Long securityId,
@@ -13,6 +14,7 @@ public record SecurityMasterResponse(
         String currency,
         String name,
         String assetType,
+        EquityCategory equityCategory,
         String status) {
 
     public static SecurityMasterResponse from(SecurityDetails security) {
@@ -27,6 +29,7 @@ public record SecurityMasterResponse(
                 security.getCurrency(),
                 security.getName(),
                 security.getAssetType() == null ? null : security.getAssetType().name(),
+                security.getEquityCategory(),
                 security.getStatus());
     }
 }

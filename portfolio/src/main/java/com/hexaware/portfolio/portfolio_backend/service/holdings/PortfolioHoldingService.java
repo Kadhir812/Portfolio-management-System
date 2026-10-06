@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.hexaware.portfolio.portfolio_backend.dto.*;
 import com.hexaware.portfolio.portfolio_backend.entity.*;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.EquityCategory;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import com.hexaware.portfolio.portfolio_backend.exceptions.*;
 import com.hexaware.portfolio.portfolio_backend.repository.*;
 import com.hexaware.portfolio.portfolio_backend.security.CurrentUserService;
@@ -58,13 +60,14 @@ public class PortfolioHoldingService {
             AssetClass assetClass = securityService.assetClass(s.getAssetType());
             if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass)) return null;
             Optional<DailyPrice> p = asOfDate == null ? Optional.ofNullable(securityService.latestPrice(s.getSecurityId())) : prices.findTopBySecurityIdAndTradeDateLessThanEqualOrderByTradeDateDesc(s.getSecurityId(), asOfDate);
-            return p.map(price -> new EligibleSecurityResponse(s.getSecurityId(), s.getIsin(), s.getSymbol(), s.getDescription(), assetClass, securityService.priceValue(price), price.getTradeDate())).orElse(null);
+            return p.map(price -> new EligibleSecurityResponse(s.getSecurityId(), s.getIsin(), s.getSymbol(), s.getDescription(), assetClass, s.getEquityCategory(), securityService.priceValue(price), price.getTradeDate())).orElse(null);
         }).filter(Objects::nonNull).toList();
     }
 
     @Transactional
     public PortfolioHolding addSecurity(Long portfolioId, AddSecurityRequest request) {
         Portfolio p = ownPortfolio(portfolioId);
+        ensurePortfolioOpen(p);
         if (request == null || (request.securityId() == null && request.isin() == null) || request.shares() == null || request.shares().signum() <= 0) throw new PortfolioValidationException("A security and positive share quantity are required");
         SecurityDetails s = request.securityId() != null
             ? securities.findById(request.securityId()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(request.securityId())))
@@ -80,13 +83,14 @@ public class PortfolioHoldingService {
         LocalDate transactionDate = p.isHoldingsSaved() ? LocalDate.now() : (p.getPurchaseDate() == null ? LocalDate.now() : p.getPurchaseDate());
         DailyPrice price = securityService.priceOnOrBefore(s.getSecurityId(), transactionDate);
         BigDecimal unitPrice = securityService.priceValue(price);
-        allocationService.ensureDoesNotExceedTarget(p, securityService.assetClass(s.getAssetType()), unitPrice.multiply(request.shares()), null);
+        allocationService.ensureDoesNotExceedTarget(p, securityService.assetClass(s.getAssetType()), s.getEquityCategory(), unitPrice.multiply(request.shares()), null);
         if (existing != null) {
             existing.setSecurityId(s.getSecurityId());
             existing.setIsin(s.getIsin());
             existing.setSymbol(s.getSymbol());
             existing.setSecurityName(s.getName());
             existing.setAssetClass(securityService.assetClass(s.getAssetType()));
+            existing.setEquityCategory(s.getEquityCategory());
             existing.setShares(existing.getShares().add(request.shares()));
             existing.setPrice(unitPrice);
             existing.setValue(unitPrice.multiply(existing.getShares()).setScale(2, RoundingMode.HALF_UP));
@@ -97,7 +101,7 @@ public class PortfolioHoldingService {
             return saved;
         }
         PortfolioHolding holding = PortfolioHolding.builder().portfolioId(portfolioId).securityId(s.getSecurityId()).isin(s.getIsin()).symbol(s.getSymbol())
-            .securityName(s.getName()).assetClass(securityService.assetClass(s.getAssetType())).shares(request.shares())
+            .securityName(s.getName()).assetClass(securityService.assetClass(s.getAssetType())).equityCategory(s.getEquityCategory()).shares(request.shares())
                 .price(unitPrice).value(unitPrice.multiply(request.shares()).setScale(2, RoundingMode.HALF_UP))
                 .priceDate(price.getTradeDate()).createdAt(Instant.now()).updatedAt(Instant.now()).build();
         PortfolioHolding saved = holdings.save(holding);
@@ -108,15 +112,16 @@ public class PortfolioHoldingService {
     @Transactional
     public Portfolio saveHoldings(Long portfolioId) {
         Portfolio p = ownPortfolio(portfolioId);
+        ensurePortfolioOpen(p);
         List<PortfolioHolding> rows = holdings.findByPortfolioId(portfolioId);
         if (rows.isEmpty()) throw new PortfolioValidationException("Add at least one holding before saving");
         if (!p.isHoldingsSaved()) {
             for (PortfolioHolding h : rows) {
                 trades.save(PortfolioTrade.builder().portfolioId(portfolioId).securityId(h.getSecurityId()).isin(h.getIsin()).symbol(h.getSymbol())
-                        .securityName(h.getSecurityName()).assetClass(h.getAssetClass()).signedShares(h.getShares())
+                        .securityName(h.getSecurityName()).assetClass(h.getAssetClass()).equityCategory(h.getEquityCategory()).signedShares(h.getShares())
                         .unitPrice(h.getPrice()).tradeDate(p.getPurchaseDate()).createdAt(Instant.now()).build());
             }
-            p.setHoldingsSaved(true); p.setUpdatedAt(Instant.now());
+            p.setHoldingsSaved(true); p.setStatus(PortfolioStatus.ACTIVE); p.setUpdatedAt(Instant.now());
             portfolios.save(p);
         }
         return p;
@@ -128,6 +133,7 @@ public class PortfolioHoldingService {
         if (request == null || request.shares() == null || request.shares().signum() <= 0) throw new PortfolioValidationException("Shares must be greater than zero");
         BigDecimal delta = request.shares().subtract(row.getShares());
         Portfolio p = ownPortfolio(portfolioId);
+        ensurePortfolioOpen(p);
         if (p.isHoldingsSaved() && delta.signum() != 0) {
             SecurityDetails security = securityService.resolveHolding(row);
             LocalDate date = LocalDate.now();
@@ -135,14 +141,16 @@ public class PortfolioHoldingService {
             recordTrade(portfolioId, security, row.getAssetClass(), delta, price, date);
             row.setPrice(price); row.setPriceDate(securityService.priceOnOrBefore(security.getSecurityId(), date).getTradeDate());
         }
-        allocationService.ensureDoesNotExceedTarget(p, row.getAssetClass(), row.getPrice().multiply(request.shares()), row);
+        allocationService.ensureDoesNotExceedTarget(p, row.getAssetClass(), row.getEquityCategory(), row.getPrice().multiply(request.shares()), row);
         row.setShares(request.shares()); row.setValue(row.getPrice().multiply(row.getShares()).setScale(2, RoundingMode.HALF_UP)); row.setUpdatedAt(Instant.now());
         return holdings.save(row);
     }
     @Transactional
     public void delete(Long portfolioId, Long holdingId) {
         PortfolioHolding row = getById(portfolioId, holdingId);
-        if (ownPortfolio(portfolioId).isHoldingsSaved()) {
+        Portfolio portfolio = ownPortfolio(portfolioId);
+        ensurePortfolioOpen(portfolio);
+        if (portfolio.isHoldingsSaved()) {
             SecurityDetails security = securityService.resolveHolding(row);
             LocalDate date = LocalDate.now();
             BigDecimal price = securityService.priceValue(securityService.priceOnOrBefore(security.getSecurityId(), date));
@@ -182,7 +190,7 @@ public class PortfolioHoldingService {
             BigDecimal currentPrice = securityService.priceValue(daily), value = currentPrice.multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal averageCost = bought.getOrDefault(entry.getKey(), ZERO).signum() == 0 ? ZERO : costs.get(entry.getKey()).divide(bought.get(entry.getKey()), 6, RoundingMode.HALF_UP);
             BigDecimal gain = currentPrice.subtract(averageCost).multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
-            output.add(new PortfolioValuationResponse.HoldingValuation(security.getSecurityId(), security.getIsin(), t.getSymbol(), t.getSecurityName(), t.getAssetClass(), entry.getValue(), averageCost, currentPrice, daily.getTradeDate(), value, gain));
+            output.add(new PortfolioValuationResponse.HoldingValuation(security.getSecurityId(), security.getIsin(), t.getSymbol(), t.getSecurityName(), t.getAssetClass(), t.getEquityCategory() == null ? security.getEquityCategory() : t.getEquityCategory(), entry.getValue(), averageCost, currentPrice, daily.getTradeDate(), value, gain));
             classValues.merge(t.getAssetClass(), value, BigDecimal::add); total = total.add(value); totalCost = totalCost.add(averageCost.multiply(entry.getValue()));
             if (daily.getTradeDate().isBefore(effective)) effective = daily.getTradeDate();
         }
@@ -213,32 +221,126 @@ public class PortfolioHoldingService {
     @Transactional
     public void rebalance(Long portfolioId, RebalanceRequest request) {
         Portfolio p = ownPortfolio(portfolioId);
+        ensurePortfolioOpen(p);
         ensureTradeHistory(p);
         if (request == null || request.tradeDate() == null || request.trades() == null || request.trades().isEmpty()) throw new PortfolioValidationException("Trade date and at least one trade are required");
         if (request.tradeDate().isBefore(p.getPurchaseDate()) || request.tradeDate().isAfter(LocalDate.now())) throw new PortfolioValidationException("Trade date must be between purchase date and today");
         Map<Long, BigDecimal> quantitiesAtTradeDate = new HashMap<>();
+        Map<Long, PortfolioTrade> lastTradeAtTradeDate = new HashMap<>();
         for (PortfolioTrade prior : trades.findByPortfolioIdAndTradeDateLessThanEqualOrderByTradeDateAscIdAsc(portfolioId, request.tradeDate())) {
-            quantitiesAtTradeDate.merge(securityService.tradeSecurityId(prior), prior.getSignedShares(), BigDecimal::add);
+            Long securityId = securityService.tradeSecurityId(prior);
+            quantitiesAtTradeDate.merge(securityId, prior.getSignedShares(), BigDecimal::add);
+            lastTradeAtTradeDate.put(securityId, prior);
         }
         Map<Long, BigDecimal> requestedTrades = new LinkedHashMap<>();
         for (RebalanceRequest.TradeOrder order : request.trades()) {
             if (order == null || order.signedShares() == null) continue;
-            if (order.signedShares().signum() > 0) throw new PortfolioValidationException("Rebalance accepts sell orders only; add purchases from holdings separately");
+            if (order.signedShares().signum() == 0) continue;
             Long securityId = order.securityId();
             if (securityId == null && order.isin() != null) {
                 securityId = securities.findByIsin(order.isin())
                         .orElseThrow(() -> new SecurityNotFoundException(order.isin())).getSecurityId();
             }
-            if (securityId != null) requestedTrades.merge(securityId, order.signedShares(), BigDecimal::add);
+            if (securityId == null) throw new PortfolioValidationException("Every rebalance order needs a security");
+            requestedTrades.merge(securityId, order.signedShares(), BigDecimal::add);
         }
+
+        if (requestedTrades.isEmpty()) throw new PortfolioValidationException("At least one nonzero buy or sell order is required");
+
+        Map<AssetClass, BigDecimal> valueByClass = new EnumMap<>(AssetClass.class);
+        Map<EquityCategory, BigDecimal> valueByEquityCategory = new EnumMap<>(EquityCategory.class);
+        BigDecimal investedBefore = ZERO;
+        for (var position : quantitiesAtTradeDate.entrySet()) {
+            if (position.getValue().signum() <= 0) continue;
+            PortfolioTrade lastTrade = lastTradeAtTradeDate.get(position.getKey());
+            SecurityDetails security = securityService.resolveTrade(lastTrade);
+            AssetClass assetClass = securityService.assetClass(security.getAssetType());
+            BigDecimal marketValue = securityService.priceValue(
+                    securityService.priceOnOrBefore(position.getKey(), request.tradeDate()))
+                    .multiply(position.getValue());
+            investedBefore = investedBefore.add(marketValue);
+            valueByClass.merge(assetClass, marketValue, BigDecimal::add);
+            EquityCategory equityCategory = lastTrade.getEquityCategory() == null
+                    ? security.getEquityCategory() : lastTrade.getEquityCategory();
+            if (assetClass == AssetClass.STOCKS && equityCategory != null) {
+                valueByEquityCategory.merge(equityCategory, marketValue, BigDecimal::add);
+            }
+        }
+
+        Map<AssetClass, BigDecimal> themeTargets = new EnumMap<>(AssetClass.class);
+        Map<EquityCategory, BigDecimal> equityTargets = new EnumMap<>(EquityCategory.class);
+        if (p.getTheme() != null) {
+            ThemeDefinition theme = themes.findByTheme(p.getTheme())
+                    .orElseThrow(() -> new PortfolioValidationException("Investment theme is not configured"));
+            theme.getAllocations().forEach(allocation -> themeTargets.put(allocation.getAssetClass(), allocation.getPercentage()));
+            theme.getEquityAllocations().forEach(allocation -> equityTargets.put(allocation.getEquityCategory(), allocation.getPercentage()));
+        }
+        BigDecimal stocksTarget = themeTargets.getOrDefault(AssetClass.STOCKS, ZERO);
+
+        List<RebalanceTrade> preparedTrades = new ArrayList<>();
+        Map<AssetClass, BigDecimal> tradeValueByClass = new EnumMap<>(AssetClass.class);
+        Map<EquityCategory, BigDecimal> tradeValueByEquityCategory = new EnumMap<>(EquityCategory.class);
+        BigDecimal purchaseValue = ZERO;
+        BigDecimal saleValue = ZERO;
         for (var order : requestedTrades.entrySet()) {
             BigDecimal signedShares = order.getValue();
             if (signedShares.signum() == 0) continue;
             SecurityDetails security = securities.findById(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(order.getKey())));
             BigDecimal afterTrade = quantitiesAtTradeDate.getOrDefault(order.getKey(), ZERO).add(signedShares);
             if (afterTrade.signum() < 0) throw new PortfolioValidationException("Cannot sell more shares than the portfolio owns: " + security.getSymbol());
+            AssetClass assetClass = securityService.assetClass(security.getAssetType());
+            if (signedShares.signum() > 0 && p.getTheme() != null && !themeTargets.containsKey(assetClass)) {
+                throw new PortfolioValidationException("This security is not part of the portfolio's investment theme");
+            }
+            EquityCategory equityCategory = security.getEquityCategory();
+            if (signedShares.signum() > 0 && p.getTheme() != null && assetClass == AssetClass.STOCKS
+                    && (equityCategory == null || !equityTargets.containsKey(equityCategory))) {
+                throw new PortfolioValidationException("This security has no configured large, mid, or small cap category");
+            }
             DailyPrice price = securityService.priceOnOrBefore(security.getSecurityId(), request.tradeDate());
-            recordTrade(portfolioId, security, securityService.assetClass(security.getAssetType()), signedShares, securityService.priceValue(price), request.tradeDate());
+            BigDecimal unitPrice = securityService.priceValue(price);
+            BigDecimal tradeValue = unitPrice.multiply(signedShares);
+            tradeValueByClass.merge(assetClass, tradeValue, BigDecimal::add);
+            if (assetClass == AssetClass.STOCKS && equityCategory != null) {
+                tradeValueByEquityCategory.merge(equityCategory, tradeValue, BigDecimal::add);
+            }
+            if (tradeValue.signum() > 0) purchaseValue = purchaseValue.add(tradeValue);
+            if (tradeValue.signum() < 0) saleValue = saleValue.subtract(tradeValue);
+            preparedTrades.add(new RebalanceTrade(security, assetClass, signedShares, unitPrice));
+        }
+
+        BigDecimal portfolioValue = p.getAmount().max(investedBefore);
+        BigDecimal availableCash = portfolioValue.subtract(investedBefore).max(ZERO).add(saleValue);
+        if (purchaseValue.compareTo(availableCash.add(new BigDecimal("0.01"))) > 0) {
+            throw new PortfolioValidationException("Buy orders exceed available cash and sale proceeds");
+        }
+
+        for (var tradeValue : tradeValueByClass.entrySet()) {
+            BigDecimal projectedValue = valueByClass.getOrDefault(tradeValue.getKey(), ZERO).add(tradeValue.getValue());
+            BigDecimal targetPercentage = themeTargets.get(tradeValue.getKey());
+            if (tradeValue.getValue().signum() > 0 && targetPercentage != null) {
+                BigDecimal targetValue = portfolioValue.multiply(targetPercentage).divide(HUNDRED, 2, RoundingMode.HALF_UP);
+                if (projectedValue.compareTo(targetValue.add(BigDecimal.ONE)) > 0) {
+                    throw new PortfolioValidationException(tradeValue.getKey() + " purchases exceed the theme target of " + targetPercentage + "%");
+                }
+            }
+            valueByClass.put(tradeValue.getKey(), projectedValue);
+        }
+
+        for (var tradeValue : tradeValueByEquityCategory.entrySet()) {
+            BigDecimal targetPercentage = equityTargets.get(tradeValue.getKey());
+            if (tradeValue.getValue().signum() > 0 && targetPercentage != null) {
+                BigDecimal projectedValue = valueByEquityCategory.getOrDefault(tradeValue.getKey(), ZERO).add(tradeValue.getValue());
+                BigDecimal targetValue = portfolioValue.multiply(stocksTarget).multiply(targetPercentage)
+                        .divide(HUNDRED.multiply(HUNDRED), 2, RoundingMode.HALF_UP);
+                if (projectedValue.compareTo(targetValue.add(BigDecimal.ONE)) > 0) {
+                    throw new PortfolioValidationException(tradeValue.getKey() + " purchases exceed the theme target of " + targetPercentage + "%");
+                }
+            }
+        }
+
+        for (RebalanceTrade trade : preparedTrades) {
+            recordTrade(portfolioId, trade.security(), trade.assetClass(), trade.signedShares(), trade.unitPrice(), request.tradeDate());
         }
         refreshHoldingSnapshots(portfolioId);
     }
@@ -288,6 +390,7 @@ public class PortfolioHoldingService {
             BigDecimal unitPrice = securityService.priceValue(price);
             if (row == null) row = PortfolioHolding.builder().portfolioId(portfolioId).securityId(securityId).isin(security.getIsin()).createdAt(Instant.now()).build();
             row.setSymbol(last.getSymbol()); row.setSecurityName(last.getSecurityName()); row.setAssetClass(last.getAssetClass());
+            row.setEquityCategory(last.getEquityCategory() == null ? security.getEquityCategory() : last.getEquityCategory());
             row.setShares(shares); row.setPrice(unitPrice); row.setPriceDate(price.getTradeDate());
             row.setValue(unitPrice.multiply(shares).setScale(2, RoundingMode.HALF_UP)); row.setUpdatedAt(Instant.now());
             holdings.save(row);
@@ -295,11 +398,20 @@ public class PortfolioHoldingService {
     }
     private void recordTrade(Long portfolioId, SecurityDetails security, AssetClass assetClass, BigDecimal quantity, BigDecimal price, LocalDate date) {
         trades.save(PortfolioTrade.builder().portfolioId(portfolioId).securityId(security.getSecurityId()).isin(security.getIsin()).symbol(security.getSymbol())
-                .securityName(security.getName()).assetClass(assetClass).signedShares(quantity).unitPrice(price)
+                .securityName(security.getName()).assetClass(assetClass).equityCategory(security.getEquityCategory()).signedShares(quantity).unitPrice(price)
                 .tradeDate(date).createdAt(Instant.now()).build());
     }
+
+    private record RebalanceTrade(SecurityDetails security, AssetClass assetClass, BigDecimal signedShares, BigDecimal unitPrice) {}
+
     private Portfolio ownPortfolio(Long id) {
         if (id == null) throw new PortfolioValidationException("Portfolio id is required");
         return portfolios.findByIdAndOwnerUsername(id, currentUser.getCurrentUser().getUsername()).orElseThrow(() -> new PortfolioNotFoundException(id));
+    }
+
+    private void ensurePortfolioOpen(Portfolio portfolio) {
+        if (portfolio.getStatus() == PortfolioStatus.CLOSED) {
+            throw new PortfolioValidationException("Closed portfolios cannot be changed");
+        }
     }
 }

@@ -1,6 +1,7 @@
 -- 2-YEAR VOLATILE DEMO DATA FOR ALL NON-RELIANCE ASSETS
 -- GENERATED DEMO DATA, NOT VERIFIED MARKET HISTORY.
 -- Date range: 2024-09-30 to 2026-09-25. RELIANCE excluded (actual history loaded separately).
+-- Direct equities include four large-cap, three mid-cap, and three small-cap examples.
 USE portfolio_db;
 START TRANSACTION;
 INSERT INTO security_details (asset_type, symbol, series, name, description, exchange, currency, country, market, risk_level, status)
@@ -10,6 +11,12 @@ FROM (
 		UNION ALL SELECT 'EQUITY', 'HDFCBANK', 'EQ', 'HDFC Bank', 'Synthetic two-year volatile demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
 		UNION ALL SELECT 'EQUITY', 'INFY', 'EQ', 'Infosys', 'Synthetic two-year volatile demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
 		UNION ALL SELECT 'EQUITY', 'ICICIBANK', 'EQ', 'ICICI Bank', 'Synthetic two-year volatile demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'COFORGE', 'EQ', 'Coforge', 'Synthetic two-year volatile mid-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'PERSISTENT', 'EQ', 'Persistent Systems', 'Synthetic two-year volatile mid-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'POLYCAB', 'EQ', 'Polycab India', 'Synthetic two-year volatile mid-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'BLS', 'EQ', 'BLS International Services', 'Synthetic two-year volatile small-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'VERY_HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'DATAPATTNS', 'EQ', 'Data Patterns India', 'Synthetic two-year volatile small-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'VERY_HIGH', 'ACTIVE'
+		UNION ALL SELECT 'EQUITY', 'SANSERA', 'EQ', 'Sansera Engineering', 'Synthetic two-year volatile small-cap demo prices', 'NSE', 'INR', 'India', 'Indian Equity', 'VERY_HIGH', 'ACTIVE'
 		UNION ALL SELECT 'MUTUAL', 'HDFCFLEXICAP', 'MF', 'HDFC Flexi Cap Fund', 'Synthetic two-year volatile demo prices', 'AMFI', 'INR', 'India', 'Indian Mutual Funds', 'HIGH', 'ACTIVE'
 		UNION ALL SELECT 'MUTUAL', 'HDFCBALADV', 'MF', 'HDFC Balanced Advantage Fund', 'Synthetic two-year volatile demo prices', 'AMFI', 'INR', 'India', 'Indian Mutual Funds', 'MEDIUM', 'ACTIVE'
 		UNION ALL SELECT 'MUTUAL', 'HDFCMIDCAP', 'MF', 'HDFC Mid Cap Fund', 'Synthetic two-year volatile demo prices', 'AMFI', 'INR', 'India', 'Indian Mutual Funds', 'HIGH', 'ACTIVE'
@@ -48,19 +55,25 @@ FROM (
 ) seed
 WHERE NOT EXISTS (SELECT 1 FROM security_details existing WHERE existing.symbol = seed.symbol);
 
-DELETE p
-FROM daily_prices p
-JOIN security_details s ON s.security_id = p.security_id
-WHERE s.symbol IN (
-		'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HDFCFLEXICAP', 'HDFCBALADV', 'HDFCMIDCAP', 'HDFCLARGECAP', 'HDFCMULTICAP',
-		'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'COPPER', 'SBINBOND', 'HDFCBOND', 'PFCBOND', 'HCLTBOND', 'RELIANCEBOND',
-		'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'EMBASSY', 'MINDSPACE', 'BIRET', 'NXST', 'REIT5',
-		'NIFTYBEES', 'BANKBEES', 'JUNIORBEES', 'GOLDBEES', 'ITBEES', 'INR', 'USD', 'EUR', 'GBP', 'JPY'
-)
-	AND p.trade_date BETWEEN '2024-09-30' AND '2026-09-30';
+UPDATE security_details
+SET equity_category = CASE symbol
+	WHEN 'TCS' THEN 'LARGE_CAP'
+	WHEN 'HDFCBANK' THEN 'LARGE_CAP'
+	WHEN 'INFY' THEN 'LARGE_CAP'
+	WHEN 'ICICIBANK' THEN 'LARGE_CAP'
+	WHEN 'COFORGE' THEN 'MID_CAP'
+	WHEN 'PERSISTENT' THEN 'MID_CAP'
+	WHEN 'POLYCAB' THEN 'MID_CAP'
+	WHEN 'BLS' THEN 'SMALL_CAP'
+	WHEN 'DATAPATTNS' THEN 'SMALL_CAP'
+	WHEN 'SANSERA' THEN 'SMALL_CAP'
+END
+WHERE asset_type = 'EQUITY'
+	AND symbol IN ('TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'COFORGE', 'PERSISTENT', 'POLYCAB', 'BLS', 'DATAPATTNS', 'SANSERA');
+
 -- TCS
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='TCS' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',3807.920550,3920.181882,3797.952421,3840.588482,3800.212972,3840.588482,508694,NULL,NULL,NULL),
 (@sid,'2024-10-01',3845.225751,3857.450886,3765.572914,3774.098573,3840.588482,3774.098573,512086,NULL,NULL,NULL),
 (@sid,'2024-10-02',3774.103502,3799.872242,3753.878197,3791.684740,3774.098573,3791.684740,449901,NULL,NULL,NULL),
@@ -311,7 +324,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',2377.732827,2385.249839,2363.153204,2380.490656,2387.763438,2380.490656,875396,NULL,NULL,NULL),
 (@sid,'2025-09-11',2374.181535,2398.235565,2371.572413,2380.911804,2380.490656,2380.911804,755275,NULL,NULL,NULL),
 (@sid,'2025-09-12',2371.076901,2419.864722,2353.472463,2393.093992,2380.911804,2393.093992,460692,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',2388.331188,2428.983731,2382.953362,2427.355196,2393.093992,2427.355196,578706,NULL,NULL,NULL),
 (@sid,'2025-09-16',2436.553342,2472.353818,2369.129463,2404.680183,2427.355196,2404.680183,425360,NULL,NULL,NULL),
 (@sid,'2025-09-17',2418.775767,2480.164701,2403.763963,2439.614858,2404.680183,2439.614858,669567,NULL,NULL,NULL),
@@ -562,7 +575,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',2244.160620,2256.086357,2215.551007,2255.818939,2240.562323,2255.818939,346067,NULL,NULL,NULL),
 (@sid,'2026-08-27',2258.600763,2365.840643,2245.321340,2308.362324,2255.818939,2308.362324,511904,NULL,NULL,NULL),
 (@sid,'2026-08-28',2304.699353,2324.747835,2285.031584,2320.496534,2308.362324,2320.496534,431923,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',2316.602830,2391.039608,2300.091101,2378.435577,2320.496534,2378.435577,537831,NULL,NULL,NULL),
 (@sid,'2026-09-01',2376.073146,2439.038235,2352.118579,2419.500217,2378.435577,2419.500217,699817,NULL,NULL,NULL),
 (@sid,'2026-09-02',2403.831300,2491.368696,2385.670098,2462.201439,2419.500217,2462.201439,762430,NULL,NULL,NULL),
@@ -585,7 +598,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',2442.456219,2479.667038,2423.489031,2451.952248,2449.160843,2451.952248,314583,NULL,NULL,NULL);
 -- HDFCBANK
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCBANK' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',1683.855079,1743.657262,1679.069440,1717.401755,1700.087570,1717.401755,412236,NULL,NULL,NULL),
 (@sid,'2024-10-01',1711.076638,1716.496316,1682.818896,1707.228489,1717.401755,1707.228489,375863,NULL,NULL,NULL),
 (@sid,'2024-10-02',1697.548275,1711.458021,1686.801619,1704.618748,1707.228489,1704.618748,444067,NULL,NULL,NULL),
@@ -836,7 +849,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',2025.505957,2063.637035,2018.698008,2050.944889,2015.060726,2050.944889,477094,NULL,NULL,NULL),
 (@sid,'2025-09-11',2047.053963,2085.496031,2017.809112,2036.642239,2050.944889,2036.642239,658976,NULL,NULL,NULL),
 (@sid,'2025-09-12',2011.071007,2071.974740,1982.307473,2063.095449,2036.642239,2063.095449,515668,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',2057.652713,2088.570715,2045.386072,2083.467011,2063.095449,2083.467011,906126,NULL,NULL,NULL),
 (@sid,'2025-09-16',2102.848928,2107.143666,2064.102118,2089.586144,2083.467011,2089.586144,462714,NULL,NULL,NULL),
 (@sid,'2025-09-17',2081.985884,2092.217057,2011.892119,2040.122333,2089.586144,2040.122333,241937,NULL,NULL,NULL),
@@ -1087,7 +1100,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',1263.818602,1264.191775,1231.630991,1249.736655,1262.455908,1249.736655,1010150,NULL,NULL,NULL),
 (@sid,'2026-08-27',1249.566705,1259.522384,1222.413193,1240.691235,1249.736655,1240.691235,807815,NULL,NULL,NULL),
 (@sid,'2026-08-28',1242.407491,1245.407355,1207.981531,1213.655321,1240.691235,1213.655321,279658,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',1210.792407,1222.217226,1198.920901,1200.794954,1213.655321,1200.794954,476041,NULL,NULL,NULL),
 (@sid,'2026-09-01',1212.352437,1221.407643,1189.847321,1190.654334,1200.794954,1190.654334,320564,NULL,NULL,NULL),
 (@sid,'2026-09-02',1200.632888,1214.068481,1164.284514,1181.429220,1190.654334,1181.429220,902585,NULL,NULL,NULL),
@@ -1110,7 +1123,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',1172.948347,1207.219239,1164.798642,1187.110075,1167.930313,1187.110075,893709,NULL,NULL,NULL);
 -- INFY
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='INFY' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',1875.794768,1887.794524,1845.131730,1859.577178,1900.445786,1859.577178,462005,NULL,NULL,NULL),
 (@sid,'2024-10-01',1861.128362,1876.368649,1826.362701,1844.607360,1859.577178,1844.607360,677724,NULL,NULL,NULL),
 (@sid,'2024-10-02',1834.189915,1850.119068,1826.036690,1846.793571,1844.607360,1846.793571,719791,NULL,NULL,NULL),
@@ -1361,7 +1374,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',1712.665156,1714.669897,1695.035405,1707.255013,1719.132910,1707.255013,458425,NULL,NULL,NULL),
 (@sid,'2025-09-11',1719.419263,1733.749174,1640.615943,1661.798389,1707.255013,1661.798389,298475,NULL,NULL,NULL),
 (@sid,'2025-09-12',1656.323060,1679.276952,1644.639888,1666.216629,1661.798389,1666.216629,644791,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',1661.934584,1680.616706,1618.980171,1624.757287,1666.216629,1624.757287,771155,NULL,NULL,NULL),
 (@sid,'2025-09-16',1621.967173,1650.453659,1598.148349,1646.115645,1624.757287,1646.115645,434451,NULL,NULL,NULL),
 (@sid,'2025-09-17',1644.957020,1651.275113,1633.595928,1642.247518,1646.115645,1642.247518,819191,NULL,NULL,NULL),
@@ -1612,7 +1625,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',1469.869933,1482.456160,1427.236297,1447.709060,1466.762270,1447.709060,624938,NULL,NULL,NULL),
 (@sid,'2026-08-27',1448.884332,1495.396428,1437.058714,1474.981246,1447.709060,1474.981246,282236,NULL,NULL,NULL),
 (@sid,'2026-08-28',1484.090029,1493.051704,1468.192384,1470.941201,1474.981246,1470.941201,345878,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',1459.704045,1470.055191,1450.858186,1451.864667,1470.941201,1451.864667,524842,NULL,NULL,NULL),
 (@sid,'2026-09-01',1434.454535,1451.624806,1402.519752,1425.254085,1451.864667,1425.254085,405796,NULL,NULL,NULL),
 (@sid,'2026-09-02',1421.860971,1426.238216,1403.552092,1419.960826,1425.254085,1419.960826,567929,NULL,NULL,NULL),
@@ -1635,7 +1648,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',1307.956610,1324.822132,1304.707729,1319.593906,1308.408483,1319.593906,437205,NULL,NULL,NULL);
 -- ICICIBANK
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='ICICIBANK' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',1299.397295,1301.448377,1263.363358,1271.060559,1300.334504,1271.060559,481120,NULL,NULL,NULL),
 (@sid,'2024-10-01',1280.241883,1303.127073,1272.393301,1288.102475,1271.060559,1288.102475,767450,NULL,NULL,NULL),
 (@sid,'2024-10-02',1288.224643,1309.881456,1263.481468,1277.052723,1288.102475,1277.052723,594809,NULL,NULL,NULL),
@@ -1886,7 +1899,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',1775.392494,1809.142230,1766.977172,1790.149694,1779.197837,1790.149694,513111,NULL,NULL,NULL),
 (@sid,'2025-09-11',1797.184400,1814.243185,1790.066335,1810.892088,1790.149694,1810.892088,446817,NULL,NULL,NULL),
 (@sid,'2025-09-12',1813.175427,1823.814560,1727.698362,1734.590532,1810.892088,1734.590532,578164,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',1722.993547,1754.743286,1718.311717,1748.363370,1734.590532,1748.363370,201387,NULL,NULL,NULL),
 (@sid,'2025-09-16',1744.444756,1745.649793,1724.245482,1734.846576,1748.363370,1734.846576,476855,NULL,NULL,NULL),
 (@sid,'2025-09-17',1726.645819,1738.704876,1711.697267,1722.361035,1734.846576,1722.361035,1272519,NULL,NULL,NULL),
@@ -2137,7 +2150,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',1522.734395,1545.664468,1513.274219,1525.019589,1524.723934,1525.019589,492451,NULL,NULL,NULL),
 (@sid,'2026-08-27',1526.164314,1531.041297,1525.790963,1526.412343,1525.019589,1526.412343,248267,NULL,NULL,NULL),
 (@sid,'2026-08-28',1521.235376,1521.649610,1469.435375,1495.819763,1526.412343,1495.819763,448922,NULL,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',1491.414925,1498.266901,1472.507235,1477.856213,1495.819763,1477.856213,324071,NULL,NULL,NULL),
 (@sid,'2026-09-01',1465.209717,1510.333343,1447.074228,1499.261687,1477.856213,1499.261687,938476,NULL,NULL,NULL),
 (@sid,'2026-09-02',1498.938808,1513.902450,1488.028111,1499.642560,1499.261687,1499.642560,621158,NULL,NULL,NULL),
@@ -2160,7 +2173,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',1538.323017,1566.386524,1530.041931,1560.670887,1542.139416,1560.670887,691029,NULL,NULL,NULL);
 -- HDFCFLEXICAP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCFLEXICAP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1211.163508,1200.051133,1211.163508,527142,1211.163508,NULL,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,1206.699389,1211.163508,1206.699389,647139,1206.699389,NULL,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,1211.950228,1206.699389,1211.950228,384220,1211.950228,NULL,NULL),
@@ -2411,7 +2424,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,1147.830128,1157.058026,1147.830128,474555,1147.830128,NULL,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,1160.546743,1147.830128,1160.546743,242938,1160.546743,NULL,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,1161.092697,1160.546743,1161.092697,407767,1161.092697,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,1167.350542,1161.092697,1167.350542,412820,1167.350542,NULL,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,1174.580256,1167.350542,1174.580256,533621,1174.580256,NULL,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,1167.789713,1174.580256,1167.789713,505062,1167.789713,NULL,NULL),
@@ -2662,7 +2675,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1185.670775,1189.474927,1185.670775,563014,1185.670775,NULL,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,1192.769993,1185.670775,1192.769993,563798,1192.769993,NULL,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,1194.508336,1192.769993,1194.508336,310982,1194.508336,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1214.663535,1194.508336,1214.663535,510438,1214.663535,NULL,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,1198.853201,1214.663535,1198.853201,1093695,1198.853201,NULL,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,1194.834165,1198.853201,1194.834165,418252,1194.834165,NULL,NULL),
@@ -2685,7 +2698,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1219.319069,1243.352364,1219.319069,652512,1219.319069,NULL,NULL);
 -- HDFCBALADV
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCBALADV' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,906.257249,900.021502,906.257249,328964,906.257249,NULL,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,909.354746,906.257249,909.354746,321098,909.354746,NULL,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,909.476419,909.354746,909.476419,715568,909.476419,NULL,NULL),
@@ -2936,7 +2949,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,902.773596,901.520906,902.773596,397633,902.773596,NULL,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,908.710367,902.773596,908.710367,764564,908.710367,NULL,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,918.833470,908.710367,918.833470,404579,918.833470,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,918.741967,918.833470,918.741967,573845,918.741967,NULL,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,907.111730,918.741967,907.111730,727662,907.111730,NULL,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,904.049376,907.111730,904.049376,311776,904.049376,NULL,NULL),
@@ -3187,7 +3200,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,813.793435,810.891302,813.793435,346911,813.793435,NULL,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,804.065131,813.793435,804.065131,471531,804.065131,NULL,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,802.014082,804.065131,802.014082,750512,802.014082,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,797.581046,802.014082,797.581046,466891,797.581046,NULL,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,805.745658,797.581046,805.745658,337532,805.745658,NULL,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,804.994384,805.745658,804.994384,794492,804.994384,NULL,NULL),
@@ -3210,7 +3223,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,807.597558,813.913169,807.597558,581596,807.597558,NULL,NULL);
 -- HDFCMIDCAP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCMIDCAP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1100.466618,1100.000099,1100.466618,556674,1100.466618,NULL,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,1108.327791,1100.466618,1108.327791,659117,1108.327791,NULL,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,1090.169794,1108.327791,1090.169794,285719,1090.169794,NULL,NULL),
@@ -3461,7 +3474,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,1501.390289,1507.533160,1501.390289,443733,1501.390289,NULL,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,1488.841556,1501.390289,1488.841556,577264,1488.841556,NULL,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,1484.765576,1488.841556,1484.765576,844078,1484.765576,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,1475.576091,1484.765576,1475.576091,485223,1475.576091,NULL,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,1472.099458,1475.576091,1472.099458,585350,1472.099458,NULL,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,1475.841161,1472.099458,1475.841161,887307,1475.841161,NULL,NULL),
@@ -3712,7 +3725,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1468.989647,1475.382830,1468.989647,254873,1468.989647,NULL,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,1489.359434,1468.989647,1489.359434,362816,1489.359434,NULL,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,1490.049927,1489.359434,1490.049927,371471,1490.049927,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1493.936714,1490.049927,1493.936714,290622,1493.936714,NULL,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,1493.825236,1493.936714,1493.825236,574388,1493.825236,NULL,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,1510.711985,1493.825236,1510.711985,334306,1510.711985,NULL,NULL),
@@ -3735,7 +3748,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1512.041768,1513.896158,1512.041768,514506,1512.041768,NULL,NULL);
 -- HDFCLARGECAP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCLARGECAP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,991.864476,1000.033548,991.864476,454142,991.864476,NULL,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,976.642970,991.864476,976.642970,426609,976.642970,NULL,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,977.222922,976.642970,977.222922,380133,977.222922,NULL,NULL),
@@ -3986,7 +3999,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,912.569418,920.266094,912.569418,590987,912.569418,NULL,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,905.395986,912.569418,905.395986,700912,905.395986,NULL,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,894.023233,905.395986,894.023233,641929,894.023233,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,895.017602,894.023233,895.017602,610918,895.017602,NULL,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,884.092315,895.017602,884.092315,666589,884.092315,NULL,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,879.138315,884.092315,879.138315,331603,879.138315,NULL,NULL),
@@ -4237,7 +4250,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,772.711469,769.867020,772.711469,438846,772.711469,NULL,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,785.890163,772.711469,785.890163,714627,785.890163,NULL,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,774.450605,785.890163,774.450605,610146,774.450605,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,775.827820,774.450605,775.827820,462888,775.827820,NULL,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,784.564466,775.827820,784.564466,461624,784.564466,NULL,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,789.590642,784.564466,789.590642,269561,789.590642,NULL,NULL),
@@ -4260,7 +4273,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,773.553982,772.631324,773.553982,888165,773.553982,NULL,NULL);
 -- HDFCMULTICAP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCMULTICAP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1052.922833,1050.004049,1052.922833,856736,1052.922833,NULL,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,1050.410003,1052.922833,1050.410003,389186,1050.410003,NULL,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,1042.722526,1050.410003,1042.722526,333874,1042.722526,NULL,NULL),
@@ -4511,7 +4524,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,893.233489,892.058380,893.233489,368341,893.233489,NULL,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,893.805446,893.233489,893.805446,657821,893.805446,NULL,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,896.311881,893.805446,896.311881,615072,896.311881,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,884.471398,896.311881,884.471398,276702,884.471398,NULL,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,897.514557,884.471398,897.514557,391381,897.514557,NULL,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,894.324577,897.514557,894.324577,270191,894.324577,NULL,NULL),
@@ -4762,7 +4775,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,863.054308,876.495588,863.054308,701462,863.054308,NULL,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,877.305412,863.054308,877.305412,340676,877.305412,NULL,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,892.506108,877.305412,892.506108,438912,892.506108,NULL,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,902.455952,892.506108,902.455952,596204,902.455952,NULL,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,908.938531,902.455952,908.938531,876207,908.938531,NULL,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,907.176610,908.938531,907.176610,352155,907.176610,NULL,NULL),
@@ -4785,7 +4798,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1010.583284,994.394895,1010.583284,463110,1010.583284,NULL,NULL);
 -- GOLD
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='GOLD' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,65861.440131,65005.584833,65861.440131,513915,NULL,65861.440131,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,66962.678816,65861.440131,66962.678816,738387,NULL,66962.678816,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,67158.598431,66962.678816,67158.598431,204606,NULL,67158.598431,NULL),
@@ -5036,7 +5049,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,50410.590975,50255.398831,50410.590975,341178,NULL,50410.590975,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,50293.886681,50410.590975,50293.886681,339740,NULL,50293.886681,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,50626.639516,50293.886681,50626.639516,412414,NULL,50626.639516,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,49338.927680,50626.639516,49338.927680,665616,NULL,49338.927680,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,49505.332560,49338.927680,49505.332560,556122,NULL,49505.332560,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,48819.148205,49505.332560,48819.148205,532875,NULL,48819.148205,NULL),
@@ -5287,7 +5300,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,48702.509131,48830.772126,48702.509131,918441,NULL,48702.509131,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,49015.412175,48702.509131,49015.412175,679414,NULL,49015.412175,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,49979.059245,49015.412175,49979.059245,431525,NULL,49979.059245,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,48962.044350,49979.059245,48962.044350,736704,NULL,48962.044350,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,47623.005303,48962.044350,47623.005303,719155,NULL,47623.005303,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,48326.320440,47623.005303,48326.320440,632592,NULL,48326.320440,NULL),
@@ -5310,7 +5323,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,44428.081148,44130.386716,44428.081148,585294,NULL,44428.081148,NULL);
 -- SILVER
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='SILVER' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,73454.105575,75016.497904,73454.105575,577882,NULL,73454.105575,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,73168.480288,73454.105575,73168.480288,745704,NULL,73168.480288,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,75127.097769,73168.480288,75127.097769,693692,NULL,75127.097769,NULL),
@@ -5561,7 +5574,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,57734.627893,56142.145167,57734.627893,376614,NULL,57734.627893,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,57540.881035,57734.627893,57540.881035,374473,NULL,57540.881035,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,57156.718907,57540.881035,57156.718907,903943,NULL,57156.718907,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,61007.194783,57156.718907,61007.194783,339317,NULL,61007.194783,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,63124.204748,61007.194783,63124.204748,1045300,NULL,63124.204748,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,63213.868341,63124.204748,63213.868341,375698,NULL,63213.868341,NULL),
@@ -5812,7 +5825,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,57594.323841,56084.758760,57594.323841,558578,NULL,57594.323841,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,58721.483495,57594.323841,58721.483495,562706,NULL,58721.483495,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,57529.377270,58721.483495,57529.377270,920473,NULL,57529.377270,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,57569.459385,57529.377270,57569.459385,332004,NULL,57569.459385,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,56405.408213,57569.459385,56405.408213,465959,NULL,56405.408213,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,55630.729877,56405.408213,55630.729877,304087,NULL,55630.729877,NULL),
@@ -5835,7 +5848,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,49566.814945,51002.871924,49566.814945,490593,NULL,49566.814945,NULL);
 -- CRUDEOIL
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='CRUDEOIL' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,6649.602787,6501.657921,6649.602787,549202,NULL,6649.602787,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,6846.626041,6649.602787,6846.626041,365602,NULL,6846.626041,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,7090.998646,6846.626041,7090.998646,306956,NULL,7090.998646,NULL),
@@ -6086,7 +6099,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,9650.136400,9818.080501,9650.136400,359900,NULL,9650.136400,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,9547.365381,9650.136400,9547.365381,823259,NULL,9547.365381,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,9686.041018,9547.365381,9686.041018,500709,NULL,9686.041018,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,9724.760202,9686.041018,9724.760202,490620,NULL,9724.760202,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,10070.940816,9724.760202,10070.940816,427442,NULL,10070.940816,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,9739.752824,10070.940816,9739.752824,688304,NULL,9739.752824,NULL),
@@ -6337,7 +6350,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,20036.702235,20595.957792,20036.702235,375193,NULL,20036.702235,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,20388.317355,20036.702235,20388.317355,374074,NULL,20388.317355,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,20840.077607,20388.317355,20840.077607,491595,NULL,20840.077607,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,21018.688747,20840.077607,21018.688747,547605,NULL,21018.688747,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,20749.860997,21018.688747,20749.860997,513079,NULL,20749.860997,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,20768.848801,20749.860997,20768.848801,574456,NULL,20768.848801,NULL),
@@ -6360,7 +6373,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,18104.844594,18420.172055,18104.844594,385044,NULL,18104.844594,NULL);
 -- NATURALGAS
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='NATURALGAS' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,218.570109,220.004698,218.570109,251851,NULL,218.570109,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,212.937398,218.570109,212.937398,392635,NULL,212.937398,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,204.105378,212.937398,204.105378,577822,NULL,204.105378,NULL),
@@ -6611,7 +6624,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,315.643527,302.615726,315.643527,520205,NULL,315.643527,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,316.658806,315.643527,316.658806,234744,NULL,316.658806,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,316.984304,316.658806,316.984304,424396,NULL,316.984304,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,310.590366,316.984304,310.590366,306029,NULL,310.590366,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,322.059835,310.590366,322.059835,417871,NULL,322.059835,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,331.496207,322.059835,331.496207,738219,NULL,331.496207,NULL),
@@ -6862,7 +6875,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,221.823094,216.902544,221.823094,670012,NULL,221.823094,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,216.145286,221.823094,216.145286,543114,NULL,216.145286,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,211.791770,216.145286,211.791770,451853,NULL,211.791770,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,206.464744,211.791770,206.464744,470559,NULL,206.464744,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,214.420037,206.464744,214.420037,690621,NULL,214.420037,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,219.087711,214.420037,219.087711,411813,NULL,219.087711,NULL),
@@ -6885,7 +6898,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,176.628469,192.300594,176.628469,1033904,NULL,176.628469,NULL);
 -- COPPER
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='COPPER' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,786.021577,800.125781,786.021577,430418,NULL,786.021577,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,768.652465,786.021577,768.652465,367772,NULL,768.652465,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,740.133430,768.652465,740.133430,552949,NULL,740.133430,NULL),
@@ -7136,7 +7149,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,811.342353,790.737513,811.342353,582663,NULL,811.342353,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,811.175889,811.342353,811.175889,727839,NULL,811.175889,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,770.448886,811.175889,770.448886,984251,NULL,770.448886,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,768.533988,770.448886,768.533988,402035,NULL,768.533988,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,791.716462,768.533988,791.716462,689838,NULL,791.716462,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,783.652034,791.716462,783.652034,511634,NULL,783.652034,NULL),
@@ -7387,7 +7400,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,668.974577,666.749154,668.974577,395395,NULL,668.974577,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,667.120718,668.974577,667.120718,428033,NULL,667.120718,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,668.991011,667.120718,668.991011,630634,NULL,668.991011,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,692.132883,668.991011,692.132883,272569,NULL,692.132883,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,704.812379,692.132883,704.812379,744551,NULL,704.812379,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,716.124384,704.812379,716.124384,496099,NULL,716.124384,NULL),
@@ -7410,7 +7423,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,714.464403,729.885369,714.464403,432926,NULL,714.464403,NULL);
 -- SBINBOND
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='SBINBOND' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,100.050189,100.000013,100.050189,634802,NULL,NULL,100.050189),
 (@sid,'2024-10-01',NULL,NULL,NULL,100.222997,100.050189,100.222997,593468,NULL,NULL,100.222997),
 (@sid,'2024-10-02',NULL,NULL,NULL,100.459109,100.222997,100.459109,347423,NULL,NULL,100.459109),
@@ -7661,7 +7674,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,102.180093,102.346737,102.180093,927839,NULL,NULL,102.180093),
 (@sid,'2025-09-11',NULL,NULL,NULL,102.106228,102.180093,102.106228,510347,NULL,NULL,102.106228),
 (@sid,'2025-09-12',NULL,NULL,NULL,101.750521,102.106228,101.750521,710516,NULL,NULL,101.750521);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,101.459326,101.750521,101.459326,372455,NULL,NULL,101.459326),
 (@sid,'2025-09-16',NULL,NULL,NULL,101.230903,101.459326,101.230903,456327,NULL,NULL,101.230903),
 (@sid,'2025-09-17',NULL,NULL,NULL,100.834402,101.230903,100.834402,448436,NULL,NULL,100.834402),
@@ -7912,7 +7925,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,115.191007,115.147886,115.191007,792321,NULL,NULL,115.191007),
 (@sid,'2026-08-27',NULL,NULL,NULL,115.167855,115.191007,115.167855,506479,NULL,NULL,115.167855),
 (@sid,'2026-08-28',NULL,NULL,NULL,115.187484,115.167855,115.187484,706511,NULL,NULL,115.187484);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,115.031166,115.187484,115.031166,705545,NULL,NULL,115.031166),
 (@sid,'2026-09-01',NULL,NULL,NULL,115.042502,115.031166,115.042502,287990,NULL,NULL,115.042502),
 (@sid,'2026-09-02',NULL,NULL,NULL,115.052921,115.042502,115.052921,514138,NULL,NULL,115.052921),
@@ -7935,7 +7948,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,114.432730,114.430809,114.432730,620439,NULL,NULL,114.432730);
 -- HDFCBOND
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HDFCBOND' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,100.128483,100.000082,100.128483,423503,NULL,NULL,100.128483),
 (@sid,'2024-10-01',NULL,NULL,NULL,100.233489,100.128483,100.233489,580130,NULL,NULL,100.233489),
 (@sid,'2024-10-02',NULL,NULL,NULL,100.407721,100.233489,100.407721,237696,NULL,NULL,100.407721),
@@ -8186,7 +8199,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,101.668374,101.614132,101.668374,808277,NULL,NULL,101.668374),
 (@sid,'2025-09-11',NULL,NULL,NULL,101.605979,101.668374,101.605979,433899,NULL,NULL,101.605979),
 (@sid,'2025-09-12',NULL,NULL,NULL,101.756482,101.605979,101.756482,258913,NULL,NULL,101.756482);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,101.675061,101.756482,101.675061,681832,NULL,NULL,101.675061),
 (@sid,'2025-09-16',NULL,NULL,NULL,101.572600,101.675061,101.572600,542413,NULL,NULL,101.572600),
 (@sid,'2025-09-17',NULL,NULL,NULL,101.532756,101.572600,101.532756,303295,NULL,NULL,101.532756),
@@ -8437,7 +8450,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,108.693696,108.547786,108.693696,686155,NULL,NULL,108.693696),
 (@sid,'2026-08-27',NULL,NULL,NULL,108.667655,108.693696,108.667655,867940,NULL,NULL,108.667655),
 (@sid,'2026-08-28',NULL,NULL,NULL,108.811170,108.667655,108.811170,426347,NULL,NULL,108.811170);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,108.676391,108.811170,108.676391,446293,NULL,NULL,108.676391),
 (@sid,'2026-09-01',NULL,NULL,NULL,108.746036,108.676391,108.746036,561333,NULL,NULL,108.746036),
 (@sid,'2026-09-02',NULL,NULL,NULL,108.763262,108.746036,108.763262,374349,NULL,NULL,108.763262),
@@ -8460,7 +8473,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,108.832350,108.875499,108.832350,613128,NULL,NULL,108.832350);
 -- PFCBOND
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='PFCBOND' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,100.032723,100.000005,100.032723,834590,NULL,NULL,100.032723),
 (@sid,'2024-10-01',NULL,NULL,NULL,100.147800,100.032723,100.147800,556333,NULL,NULL,100.147800),
 (@sid,'2024-10-02',NULL,NULL,NULL,100.148343,100.147800,100.148343,516289,NULL,NULL,100.148343),
@@ -8711,7 +8724,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,101.708304,102.060611,101.708304,349267,NULL,NULL,101.708304),
 (@sid,'2025-09-11',NULL,NULL,NULL,101.640168,101.708304,101.640168,812908,NULL,NULL,101.640168),
 (@sid,'2025-09-12',NULL,NULL,NULL,101.495648,101.640168,101.495648,554857,NULL,NULL,101.495648);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,101.344272,101.495648,101.344272,678415,NULL,NULL,101.344272),
 (@sid,'2025-09-16',NULL,NULL,NULL,101.082075,101.344272,101.082075,461311,NULL,NULL,101.082075),
 (@sid,'2025-09-17',NULL,NULL,NULL,100.858128,101.082075,100.858128,804971,NULL,NULL,100.858128),
@@ -8962,7 +8975,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,106.776523,106.799802,106.776523,605757,NULL,NULL,106.776523),
 (@sid,'2026-08-27',NULL,NULL,NULL,107.174746,106.776523,107.174746,352665,NULL,NULL,107.174746),
 (@sid,'2026-08-28',NULL,NULL,NULL,107.110834,107.174746,107.110834,335984,NULL,NULL,107.110834);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,107.144018,107.110834,107.144018,405422,NULL,NULL,107.144018),
 (@sid,'2026-09-01',NULL,NULL,NULL,107.343006,107.144018,107.343006,685836,NULL,NULL,107.343006),
 (@sid,'2026-09-02',NULL,NULL,NULL,107.564052,107.343006,107.564052,749185,NULL,NULL,107.564052),
@@ -8985,7 +8998,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,107.306518,107.492402,107.306518,758830,NULL,NULL,107.306518);
 -- HCLTBOND
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='HCLTBOND' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,100.235022,100.000275,100.235022,562070,NULL,NULL,100.235022),
 (@sid,'2024-10-01',NULL,NULL,NULL,100.348062,100.235022,100.348062,334321,NULL,NULL,100.348062),
 (@sid,'2024-10-02',NULL,NULL,NULL,100.569224,100.348062,100.569224,460610,NULL,NULL,100.569224),
@@ -9236,7 +9249,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,105.599773,105.389187,105.599773,1358303,NULL,NULL,105.599773),
 (@sid,'2025-09-11',NULL,NULL,NULL,105.446810,105.599773,105.446810,658359,NULL,NULL,105.446810),
 (@sid,'2025-09-12',NULL,NULL,NULL,105.113564,105.446810,105.113564,338131,NULL,NULL,105.113564);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,105.124790,105.113564,105.124790,423470,NULL,NULL,105.124790),
 (@sid,'2025-09-16',NULL,NULL,NULL,105.310577,105.124790,105.310577,409874,NULL,NULL,105.310577),
 (@sid,'2025-09-17',NULL,NULL,NULL,105.090404,105.310577,105.090404,566579,NULL,NULL,105.090404),
@@ -9487,7 +9500,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,109.313479,109.042828,109.313479,564626,NULL,NULL,109.313479),
 (@sid,'2026-08-27',NULL,NULL,NULL,109.215046,109.313479,109.215046,949807,NULL,NULL,109.215046),
 (@sid,'2026-08-28',NULL,NULL,NULL,109.426059,109.215046,109.426059,1313198,NULL,NULL,109.426059);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,109.014709,109.426059,109.014709,389538,NULL,NULL,109.014709),
 (@sid,'2026-09-01',NULL,NULL,NULL,109.454179,109.014709,109.454179,875657,NULL,NULL,109.454179),
 (@sid,'2026-09-02',NULL,NULL,NULL,109.472982,109.454179,109.472982,280475,NULL,NULL,109.472982),
@@ -9510,7 +9523,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,107.480236,107.256876,107.480236,594146,NULL,NULL,107.480236);
 -- RELIANCEBOND
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='RELIANCEBOND' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,99.786389,100.000229,99.786389,422874,NULL,NULL,99.786389),
 (@sid,'2024-10-01',NULL,NULL,NULL,99.772473,99.786389,99.772473,435723,NULL,NULL,99.772473),
 (@sid,'2024-10-02',NULL,NULL,NULL,100.050416,99.772473,100.050416,257102,NULL,NULL,100.050416),
@@ -9761,7 +9774,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,102.624456,102.762665,102.624456,352635,NULL,NULL,102.624456),
 (@sid,'2025-09-11',NULL,NULL,NULL,102.438310,102.624456,102.438310,519461,NULL,NULL,102.438310),
 (@sid,'2025-09-12',NULL,NULL,NULL,102.109778,102.438310,102.109778,720973,NULL,NULL,102.109778);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,102.479225,102.109778,102.479225,523269,NULL,NULL,102.479225),
 (@sid,'2025-09-16',NULL,NULL,NULL,102.565929,102.479225,102.565929,727817,NULL,NULL,102.565929),
 (@sid,'2025-09-17',NULL,NULL,NULL,102.185996,102.565929,102.185996,308739,NULL,NULL,102.185996),
@@ -10012,7 +10025,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,109.667665,109.506434,109.667665,343899,NULL,NULL,109.667665),
 (@sid,'2026-08-27',NULL,NULL,NULL,109.578482,109.667665,109.578482,597555,NULL,NULL,109.578482),
 (@sid,'2026-08-28',NULL,NULL,NULL,109.244214,109.578482,109.244214,533445,NULL,NULL,109.244214);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,109.684151,109.244214,109.684151,576417,NULL,NULL,109.684151),
 (@sid,'2026-09-01',NULL,NULL,NULL,109.492527,109.684151,109.492527,653650,NULL,NULL,109.492527),
 (@sid,'2026-09-02',NULL,NULL,NULL,109.540402,109.492527,109.540402,340374,NULL,NULL,109.540402),
@@ -10035,7 +10048,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,108.774821,108.651521,108.774821,645134,NULL,NULL,108.774821);
 -- BTC
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='BTC' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,61796.733985,65085.967580,61796.733985,553679,NULL,61796.733985,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,60687.786275,61796.733985,60687.786275,653482,NULL,60687.786275,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,60994.377319,60687.786275,60994.377319,510599,NULL,60994.377319,NULL),
@@ -10286,7 +10299,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,83574.837781,84071.788787,83574.837781,450539,NULL,83574.837781,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,87775.494216,83574.837781,87775.494216,978072,NULL,87775.494216,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,90549.692116,87775.494216,90549.692116,308425,NULL,90549.692116,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,101210.515664,90549.692116,101210.515664,611715,NULL,101210.515664,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,101065.563112,101210.515664,101065.563112,670208,NULL,101065.563112,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,106651.030099,101065.563112,106651.030099,614356,NULL,106651.030099,NULL),
@@ -10537,7 +10550,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,327162.411894,329796.739000,327162.411894,740590,NULL,327162.411894,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,323077.723210,327162.411894,323077.723210,457453,NULL,323077.723210,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,340375.025373,323077.723210,340375.025373,550884,NULL,340375.025373,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,335479.048395,340375.025373,335479.048395,731079,NULL,335479.048395,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,344043.836964,335479.048395,344043.836964,618273,NULL,344043.836964,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,319853.049703,344043.836964,319853.049703,465079,NULL,319853.049703,NULL),
@@ -10560,7 +10573,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,238513.861517,234818.037270,238513.861517,427183,NULL,238513.861517,NULL);
 -- ETH
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='ETH' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,2332.427850,2506.318781,2332.427850,437252,NULL,2332.427850,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,2337.627639,2332.427850,2337.627639,369981,NULL,2337.627639,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,2283.197667,2337.627639,2283.197667,331065,NULL,2283.197667,NULL),
@@ -10811,7 +10824,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,4716.929509,4681.893769,4716.929509,496465,NULL,4716.929509,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,4539.762621,4716.929509,4539.762621,410906,NULL,4539.762621,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,4927.575803,4539.762621,4927.575803,455307,NULL,4927.575803,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,4906.556976,4927.575803,4906.556976,391090,NULL,4906.556976,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,4844.525864,4906.556976,4844.525864,541745,NULL,4844.525864,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,4709.217754,4844.525864,4709.217754,686872,NULL,4709.217754,NULL),
@@ -11062,7 +11075,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,25364.693997,24635.321046,25364.693997,507433,NULL,25364.693997,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,28533.122805,25364.693997,28533.122805,518449,NULL,28533.122805,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,29898.620771,28533.122805,29898.620771,743812,NULL,29898.620771,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,28602.251845,29898.620771,28602.251845,772029,NULL,28602.251845,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,26135.163400,28602.251845,26135.163400,609569,NULL,26135.163400,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,27237.111787,26135.163400,27237.111787,432465,NULL,27237.111787,NULL),
@@ -11085,7 +11098,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,24385.783037,24229.124452,24385.783037,522413,NULL,24385.783037,NULL);
 -- BNB
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='BNB' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,551.380198,550.001725,551.380198,507166,NULL,551.380198,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,564.088535,551.380198,564.088535,601943,NULL,564.088535,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,537.150451,564.088535,537.150451,774473,NULL,537.150451,NULL),
@@ -11336,7 +11349,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,480.635147,485.431589,480.635147,223105,NULL,480.635147,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,495.498825,480.635147,495.498825,382288,NULL,495.498825,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,481.395406,495.498825,481.395406,758331,NULL,481.395406,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,471.770444,481.395406,471.770444,418238,NULL,471.770444,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,475.374957,471.770444,475.374957,519255,NULL,475.374957,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,510.808286,475.374957,510.808286,396976,NULL,510.808286,NULL),
@@ -11587,7 +11600,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1270.755935,1237.248366,1270.755935,475437,NULL,1270.755935,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,1241.244985,1270.755935,1241.244985,326434,NULL,1241.244985,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,1301.254357,1241.244985,1301.254357,394819,NULL,1301.254357,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1455.510656,1301.254357,1455.510656,433478,NULL,1455.510656,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,1432.924966,1455.510656,1432.924966,680915,NULL,1432.924966,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,1350.368816,1432.924966,1350.368816,489744,NULL,1350.368816,NULL),
@@ -11610,7 +11623,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1654.445051,1687.226808,1654.445051,432934,NULL,1654.445051,NULL);
 -- SOL
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='SOL' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,161.183183,150.370603,161.183183,574003,NULL,161.183183,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,151.386896,161.183183,151.386896,443216,NULL,151.386896,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,152.089677,151.386896,152.089677,378342,NULL,152.089677,NULL),
@@ -11861,7 +11874,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,7.500000,7.500000,7.500000,691080,NULL,7.500000,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,7.500000,7.500000,7.500000,558977,NULL,7.500000,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,7.500000,7.500000,7.500000,440350,NULL,7.500000,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,7.500000,7.500000,7.500000,812883,NULL,7.500000,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,7.500000,7.500000,7.500000,368590,NULL,7.500000,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,7.500000,7.500000,7.500000,558148,NULL,7.500000,NULL),
@@ -12112,7 +12125,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,26.859546,27.150750,26.859546,456412,NULL,26.859546,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,26.857118,26.859546,26.857118,628567,NULL,26.857118,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,26.925709,26.857118,26.925709,541037,NULL,26.925709,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,25.889143,26.925709,25.889143,554668,NULL,25.889143,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,27.596840,25.889143,27.596840,518611,NULL,27.596840,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,29.431153,27.596840,29.431153,452384,NULL,29.431153,NULL),
@@ -12135,7 +12148,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,17.631553,16.602637,17.631553,755372,NULL,17.631553,NULL);
 -- XRP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='XRP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,0.569836,0.550337,0.569836,310591,NULL,0.569836,NULL),
 (@sid,'2024-10-01',NULL,NULL,NULL,0.522766,0.569836,0.522766,814775,NULL,0.522766,NULL),
 (@sid,'2024-10-02',NULL,NULL,NULL,0.574278,0.522766,0.574278,387266,NULL,0.574278,NULL),
@@ -12386,7 +12399,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,0.270650,0.272493,0.270650,456469,NULL,0.270650,NULL),
 (@sid,'2025-09-11',NULL,NULL,NULL,0.272954,0.270650,0.272954,316202,NULL,0.272954,NULL),
 (@sid,'2025-09-12',NULL,NULL,NULL,0.284959,0.272954,0.284959,240005,NULL,0.284959,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,0.271093,0.284959,0.271093,400904,NULL,0.271093,NULL),
 (@sid,'2025-09-16',NULL,NULL,NULL,0.285367,0.271093,0.285367,621764,NULL,0.285367,NULL),
 (@sid,'2025-09-17',NULL,NULL,NULL,0.291692,0.285367,0.291692,337155,NULL,0.291692,NULL),
@@ -12637,7 +12650,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,0.063456,0.063642,0.063456,531971,NULL,0.063456,NULL),
 (@sid,'2026-08-27',NULL,NULL,NULL,0.067151,0.063456,0.067151,454950,NULL,0.067151,NULL),
 (@sid,'2026-08-28',NULL,NULL,NULL,0.070494,0.067151,0.070494,309422,NULL,0.070494,NULL);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,0.068346,0.070494,0.068346,722112,NULL,0.068346,NULL),
 (@sid,'2026-09-01',NULL,NULL,NULL,0.066611,0.068346,0.066611,358862,NULL,0.066611,NULL),
 (@sid,'2026-09-02',NULL,NULL,NULL,0.063827,0.066611,0.063827,1370118,NULL,0.063827,NULL),
@@ -12660,7 +12673,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,0.068216,0.067861,0.068216,302279,NULL,0.068216,NULL);
 -- EMBASSY
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='EMBASSY' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,362.143387,360.006318,362.143387,470871,NULL,NULL,362.143387),
 (@sid,'2024-10-01',NULL,NULL,NULL,362.928816,362.143387,362.928816,383147,NULL,NULL,362.928816),
 (@sid,'2024-10-02',NULL,NULL,NULL,368.771826,362.928816,368.771826,504551,NULL,NULL,368.771826),
@@ -12911,7 +12924,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,616.656817,612.899569,616.656817,204235,NULL,NULL,616.656817),
 (@sid,'2025-09-11',NULL,NULL,NULL,623.112780,616.656817,623.112780,202506,NULL,NULL,623.112780),
 (@sid,'2025-09-12',NULL,NULL,NULL,619.946647,623.112780,619.946647,508233,NULL,NULL,619.946647);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,616.330260,619.946647,616.330260,959974,NULL,NULL,616.330260),
 (@sid,'2025-09-16',NULL,NULL,NULL,614.284970,616.330260,614.284970,626184,NULL,NULL,614.284970),
 (@sid,'2025-09-17',NULL,NULL,NULL,605.224872,614.284970,605.224872,316102,NULL,NULL,605.224872),
@@ -13162,7 +13175,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,648.936237,639.171574,648.936237,646731,NULL,NULL,648.936237),
 (@sid,'2026-08-27',NULL,NULL,NULL,646.089019,648.936237,646.089019,500493,NULL,NULL,646.089019),
 (@sid,'2026-08-28',NULL,NULL,NULL,653.075062,646.089019,653.075062,604157,NULL,NULL,653.075062);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,646.263639,653.075062,646.263639,349423,NULL,NULL,646.263639),
 (@sid,'2026-09-01',NULL,NULL,NULL,650.407812,646.263639,650.407812,389575,NULL,NULL,650.407812),
 (@sid,'2026-09-02',NULL,NULL,NULL,649.607547,650.407812,649.607547,345294,NULL,NULL,649.607547),
@@ -13185,7 +13198,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,626.957668,629.281916,626.957668,834188,NULL,NULL,626.957668);
 -- MINDSPACE
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='MINDSPACE' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,403.547295,400.015500,403.547295,545820,NULL,NULL,403.547295),
 (@sid,'2024-10-01',NULL,NULL,NULL,417.256913,403.547295,417.256913,267048,NULL,NULL,417.256913),
 (@sid,'2024-10-02',NULL,NULL,NULL,419.580292,417.256913,419.580292,518309,NULL,NULL,419.580292),
@@ -13436,7 +13449,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,460.032284,456.604332,460.032284,597333,NULL,NULL,460.032284),
 (@sid,'2025-09-11',NULL,NULL,NULL,465.430715,460.032284,465.430715,1369428,NULL,NULL,465.430715),
 (@sid,'2025-09-12',NULL,NULL,NULL,462.158065,465.430715,462.158065,782222,NULL,NULL,462.158065);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,463.432292,462.158065,463.432292,285993,NULL,NULL,463.432292),
 (@sid,'2025-09-16',NULL,NULL,NULL,460.707316,463.432292,460.707316,314855,NULL,NULL,460.707316),
 (@sid,'2025-09-17',NULL,NULL,NULL,454.983987,460.707316,454.983987,583736,NULL,NULL,454.983987),
@@ -13687,7 +13700,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,446.807880,449.962316,446.807880,317813,NULL,NULL,446.807880),
 (@sid,'2026-08-27',NULL,NULL,NULL,442.727886,446.807880,442.727886,339924,NULL,NULL,442.727886),
 (@sid,'2026-08-28',NULL,NULL,NULL,448.764133,442.727886,448.764133,576786,NULL,NULL,448.764133);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,439.866054,448.764133,439.866054,672303,NULL,NULL,439.866054),
 (@sid,'2026-09-01',NULL,NULL,NULL,435.163485,439.866054,435.163485,439564,NULL,NULL,435.163485),
 (@sid,'2026-09-02',NULL,NULL,NULL,444.864066,435.163485,444.864066,571396,NULL,NULL,444.864066),
@@ -13710,7 +13723,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,449.391269,449.764230,449.391269,361979,NULL,NULL,449.391269);
 -- BIRET
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='BIRET' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,297.950835,300.007079,297.950835,542265,NULL,NULL,297.950835),
 (@sid,'2024-10-01',NULL,NULL,NULL,300.304927,297.950835,300.304927,581178,NULL,NULL,300.304927),
 (@sid,'2024-10-02',NULL,NULL,NULL,302.844369,300.304927,302.844369,660414,NULL,NULL,302.844369),
@@ -13961,7 +13974,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,291.609349,295.473981,291.609349,625443,NULL,NULL,291.609349),
 (@sid,'2025-09-11',NULL,NULL,NULL,286.741112,291.609349,286.741112,477477,NULL,NULL,286.741112),
 (@sid,'2025-09-12',NULL,NULL,NULL,284.001193,286.741112,284.001193,445773,NULL,NULL,284.001193);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,288.082232,284.001193,288.082232,620200,NULL,NULL,288.082232),
 (@sid,'2025-09-16',NULL,NULL,NULL,290.153318,288.082232,290.153318,306982,NULL,NULL,290.153318),
 (@sid,'2025-09-17',NULL,NULL,NULL,290.658921,290.153318,290.658921,377352,NULL,NULL,290.658921),
@@ -14212,7 +14225,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,335.380409,329.565914,335.380409,360873,NULL,NULL,335.380409),
 (@sid,'2026-08-27',NULL,NULL,NULL,336.988615,335.380409,336.988615,503116,NULL,NULL,336.988615),
 (@sid,'2026-08-28',NULL,NULL,NULL,337.475801,336.988615,337.475801,650580,NULL,NULL,337.475801);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,336.315320,337.475801,336.315320,391941,NULL,NULL,336.315320),
 (@sid,'2026-09-01',NULL,NULL,NULL,336.660715,336.315320,336.660715,296119,NULL,NULL,336.660715),
 (@sid,'2026-09-02',NULL,NULL,NULL,335.298186,336.660715,335.298186,543690,NULL,NULL,335.298186),
@@ -14235,7 +14248,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,328.463460,325.773171,328.463460,546609,NULL,NULL,328.463460);
 -- NXST
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='NXST' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,107.447873,110.030795,107.447873,611572,NULL,NULL,107.447873),
 (@sid,'2024-10-01',NULL,NULL,NULL,111.078672,107.447873,111.078672,542450,NULL,NULL,111.078672),
 (@sid,'2024-10-02',NULL,NULL,NULL,110.758010,111.078672,110.758010,462461,NULL,NULL,110.758010),
@@ -14486,7 +14499,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,102.468468,100.974890,102.468468,948729,NULL,NULL,102.468468),
 (@sid,'2025-09-11',NULL,NULL,NULL,105.089994,102.468468,105.089994,537825,NULL,NULL,105.089994),
 (@sid,'2025-09-12',NULL,NULL,NULL,104.535197,105.089994,104.535197,471610,NULL,NULL,104.535197);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,104.368435,104.535197,104.368435,294925,NULL,NULL,104.368435),
 (@sid,'2025-09-16',NULL,NULL,NULL,105.641668,104.368435,105.641668,464621,NULL,NULL,105.641668),
 (@sid,'2025-09-17',NULL,NULL,NULL,104.787644,105.641668,104.787644,584751,NULL,NULL,104.787644),
@@ -14737,7 +14750,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,111.082010,110.384836,111.082010,248990,NULL,NULL,111.082010),
 (@sid,'2026-08-27',NULL,NULL,NULL,111.770174,111.082010,111.770174,446219,NULL,NULL,111.770174),
 (@sid,'2026-08-28',NULL,NULL,NULL,113.552599,111.770174,113.552599,709749,NULL,NULL,113.552599);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,113.663177,113.552599,113.663177,380195,NULL,NULL,113.663177),
 (@sid,'2026-09-01',NULL,NULL,NULL,112.693907,113.663177,112.693907,255067,NULL,NULL,112.693907),
 (@sid,'2026-09-02',NULL,NULL,NULL,112.502701,112.693907,112.502701,459208,NULL,NULL,112.502701),
@@ -14760,7 +14773,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,104.358307,104.674203,104.358307,764892,NULL,NULL,104.358307);
 -- REIT5
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='REIT5' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,256.914208,250.091392,256.914208,542553,NULL,NULL,256.914208),
 (@sid,'2024-10-01',NULL,NULL,NULL,261.599537,256.914208,261.599537,307810,NULL,NULL,261.599537),
 (@sid,'2024-10-02',NULL,NULL,NULL,266.116650,261.599537,266.116650,516369,NULL,NULL,266.116650),
@@ -15011,7 +15024,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,245.202256,244.957654,245.202256,390090,NULL,NULL,245.202256),
 (@sid,'2025-09-11',NULL,NULL,NULL,241.303216,245.202256,241.303216,963701,NULL,NULL,241.303216),
 (@sid,'2025-09-12',NULL,NULL,NULL,239.972930,241.303216,239.972930,603114,NULL,NULL,239.972930);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,239.323618,239.972930,239.323618,711826,NULL,NULL,239.323618),
 (@sid,'2025-09-16',NULL,NULL,NULL,237.660271,239.323618,237.660271,613696,NULL,NULL,237.660271),
 (@sid,'2025-09-17',NULL,NULL,NULL,234.946951,237.660271,234.946951,376025,NULL,NULL,234.946951),
@@ -15262,7 +15275,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,327.217199,328.863134,327.217199,404078,NULL,NULL,327.217199),
 (@sid,'2026-08-27',NULL,NULL,NULL,322.787219,327.217199,322.787219,498168,NULL,NULL,322.787219),
 (@sid,'2026-08-28',NULL,NULL,NULL,314.934918,322.787219,314.934918,1080384,NULL,NULL,314.934918);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,323.203826,314.934918,323.203826,370708,NULL,NULL,323.203826),
 (@sid,'2026-09-01',NULL,NULL,NULL,323.174226,323.203826,323.174226,783475,NULL,NULL,323.174226),
 (@sid,'2026-09-02',NULL,NULL,NULL,324.444306,323.174226,324.444306,598020,NULL,NULL,324.444306),
@@ -15285,7 +15298,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,314.195268,316.903569,314.195268,298460,NULL,NULL,314.195268);
 -- NIFTYBEES
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='NIFTYBEES' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,256.664530,260.021862,256.664530,318463,NULL,NULL,256.664530),
 (@sid,'2024-10-01',NULL,NULL,NULL,261.579215,256.664530,261.579215,643595,NULL,NULL,261.579215),
 (@sid,'2024-10-02',NULL,NULL,NULL,262.934492,261.579215,262.934492,328564,NULL,NULL,262.934492),
@@ -15536,7 +15549,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,378.239915,376.596184,378.239915,435767,NULL,NULL,378.239915),
 (@sid,'2025-09-11',NULL,NULL,NULL,376.621520,378.239915,376.621520,272421,NULL,NULL,376.621520),
 (@sid,'2025-09-12',NULL,NULL,NULL,370.264533,376.621520,370.264533,485132,NULL,NULL,370.264533);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,374.165949,370.264533,374.165949,201797,NULL,NULL,374.165949),
 (@sid,'2025-09-16',NULL,NULL,NULL,369.012328,374.165949,369.012328,293681,NULL,NULL,369.012328),
 (@sid,'2025-09-17',NULL,NULL,NULL,365.461443,369.012328,365.461443,532290,NULL,NULL,365.461443),
@@ -15787,7 +15800,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,514.364695,513.559840,514.364695,377505,NULL,NULL,514.364695),
 (@sid,'2026-08-27',NULL,NULL,NULL,508.868385,514.364695,508.868385,393952,NULL,NULL,508.868385),
 (@sid,'2026-08-28',NULL,NULL,NULL,508.747006,508.868385,508.747006,558894,NULL,NULL,508.747006);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,511.062718,508.747006,511.062718,307641,NULL,NULL,511.062718),
 (@sid,'2026-09-01',NULL,NULL,NULL,510.836526,511.062718,510.836526,974904,NULL,NULL,510.836526),
 (@sid,'2026-09-02',NULL,NULL,NULL,519.715487,510.836526,519.715487,703396,NULL,NULL,519.715487),
@@ -15810,7 +15823,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,528.625021,537.681631,528.625021,650747,NULL,NULL,528.625021);
 -- BANKBEES
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='BANKBEES' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,568.293455,560.059931,568.293455,532043,NULL,NULL,568.293455),
 (@sid,'2024-10-01',NULL,NULL,NULL,582.614908,568.293455,582.614908,757400,NULL,NULL,582.614908),
 (@sid,'2024-10-02',NULL,NULL,NULL,576.154583,582.614908,576.154583,458589,NULL,NULL,576.154583),
@@ -16061,7 +16074,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,773.720166,794.927492,773.720166,378046,NULL,NULL,773.720166),
 (@sid,'2025-09-11',NULL,NULL,NULL,769.057816,773.720166,769.057816,722304,NULL,NULL,769.057816),
 (@sid,'2025-09-12',NULL,NULL,NULL,778.273788,769.057816,778.273788,432230,NULL,NULL,778.273788);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,771.990781,778.273788,771.990781,281005,NULL,NULL,771.990781),
 (@sid,'2025-09-16',NULL,NULL,NULL,779.069268,771.990781,779.069268,465688,NULL,NULL,779.069268),
 (@sid,'2025-09-17',NULL,NULL,NULL,767.846307,779.069268,767.846307,555938,NULL,NULL,767.846307),
@@ -16312,7 +16325,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,903.907912,906.952501,903.907912,489800,NULL,NULL,903.907912),
 (@sid,'2026-08-27',NULL,NULL,NULL,917.778360,903.907912,917.778360,825692,NULL,NULL,917.778360),
 (@sid,'2026-08-28',NULL,NULL,NULL,913.881514,917.778360,913.881514,256127,NULL,NULL,913.881514);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,899.679008,913.881514,899.679008,735679,NULL,NULL,899.679008),
 (@sid,'2026-09-01',NULL,NULL,NULL,883.447854,899.679008,883.447854,435115,NULL,NULL,883.447854),
 (@sid,'2026-09-02',NULL,NULL,NULL,869.919711,883.447854,869.919711,603367,NULL,NULL,869.919711),
@@ -16335,7 +16348,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,929.454051,926.349081,929.454051,527623,NULL,NULL,929.454051);
 -- JUNIORBEES
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='JUNIORBEES' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,645.698716,650.014390,645.698716,527172,NULL,NULL,645.698716),
 (@sid,'2024-10-01',NULL,NULL,NULL,643.887336,645.698716,643.887336,365916,NULL,NULL,643.887336),
 (@sid,'2024-10-02',NULL,NULL,NULL,641.585804,643.887336,641.585804,784811,NULL,NULL,641.585804),
@@ -16586,7 +16599,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,493.760479,498.722970,493.760479,515294,NULL,NULL,493.760479),
 (@sid,'2025-09-11',NULL,NULL,NULL,481.074951,493.760479,481.074951,825092,NULL,NULL,481.074951),
 (@sid,'2025-09-12',NULL,NULL,NULL,478.867891,481.074951,478.867891,564774,NULL,NULL,478.867891);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,480.111004,478.867891,480.111004,878040,NULL,NULL,480.111004),
 (@sid,'2025-09-16',NULL,NULL,NULL,471.277642,480.111004,471.277642,367653,NULL,NULL,471.277642),
 (@sid,'2025-09-17',NULL,NULL,NULL,468.387426,471.277642,468.387426,370708,NULL,NULL,468.387426),
@@ -16837,7 +16850,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,730.596655,710.322913,730.596655,439335,NULL,NULL,730.596655),
 (@sid,'2026-08-27',NULL,NULL,NULL,726.057820,730.596655,726.057820,279273,NULL,NULL,726.057820),
 (@sid,'2026-08-28',NULL,NULL,NULL,725.838289,726.057820,725.838289,425739,NULL,NULL,725.838289);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,712.148265,725.838289,712.148265,326536,NULL,NULL,712.148265),
 (@sid,'2026-09-01',NULL,NULL,NULL,703.915153,712.148265,703.915153,349117,NULL,NULL,703.915153),
 (@sid,'2026-09-02',NULL,NULL,NULL,719.489831,703.915153,719.489831,312209,NULL,NULL,719.489831),
@@ -16860,7 +16873,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,689.088965,685.053888,689.088965,485895,NULL,NULL,689.088965);
 -- GOLDBEES
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='GOLDBEES' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,67.131769,65.033142,67.131769,664238,NULL,NULL,67.131769),
 (@sid,'2024-10-01',NULL,NULL,NULL,67.914807,67.131769,67.914807,419207,NULL,NULL,67.914807),
 (@sid,'2024-10-02',NULL,NULL,NULL,67.842443,67.914807,67.842443,290578,NULL,NULL,67.842443),
@@ -17111,7 +17124,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,84.008491,84.571295,84.008491,804751,NULL,NULL,84.008491),
 (@sid,'2025-09-11',NULL,NULL,NULL,83.141886,84.008491,83.141886,706501,NULL,NULL,83.141886),
 (@sid,'2025-09-12',NULL,NULL,NULL,83.286369,83.141886,83.286369,891921,NULL,NULL,83.286369);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,82.420289,83.286369,82.420289,477081,NULL,NULL,82.420289),
 (@sid,'2025-09-16',NULL,NULL,NULL,81.885868,82.420289,81.885868,273979,NULL,NULL,81.885868),
 (@sid,'2025-09-17',NULL,NULL,NULL,82.675602,81.885868,82.675602,498006,NULL,NULL,82.675602),
@@ -17362,7 +17375,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,147.674315,149.628039,147.674315,153098,NULL,NULL,147.674315),
 (@sid,'2026-08-27',NULL,NULL,NULL,147.553639,147.674315,147.553639,609716,NULL,NULL,147.553639),
 (@sid,'2026-08-28',NULL,NULL,NULL,149.057783,147.553639,149.057783,363118,NULL,NULL,149.057783);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,145.648406,149.057783,145.648406,259758,NULL,NULL,145.648406),
 (@sid,'2026-09-01',NULL,NULL,NULL,144.143724,145.648406,144.143724,404495,NULL,NULL,144.143724),
 (@sid,'2026-09-02',NULL,NULL,NULL,146.253173,144.143724,146.253173,280710,NULL,NULL,146.253173),
@@ -17385,7 +17398,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,173.980125,170.603305,173.980125,399784,NULL,NULL,173.980125);
 -- ITBEES
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='ITBEES' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,45.282845,45.000880,45.282845,331708,NULL,NULL,45.282845),
 (@sid,'2024-10-01',NULL,NULL,NULL,43.901866,45.282845,43.901866,524823,NULL,NULL,43.901866),
 (@sid,'2024-10-02',NULL,NULL,NULL,42.742970,43.901866,42.742970,331116,NULL,NULL,42.742970),
@@ -17636,7 +17649,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,44.815675,42.716229,44.815675,374513,NULL,NULL,44.815675),
 (@sid,'2025-09-11',NULL,NULL,NULL,44.742136,44.815675,44.742136,263699,NULL,NULL,44.742136),
 (@sid,'2025-09-12',NULL,NULL,NULL,43.767547,44.742136,43.767547,498486,NULL,NULL,43.767547);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,44.220292,43.767547,44.220292,236230,NULL,NULL,44.220292),
 (@sid,'2025-09-16',NULL,NULL,NULL,44.151032,44.220292,44.151032,573107,NULL,NULL,44.151032),
 (@sid,'2025-09-17',NULL,NULL,NULL,44.199275,44.151032,44.199275,245580,NULL,NULL,44.199275),
@@ -17887,7 +17900,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,42.468552,44.222964,42.468552,733271,NULL,NULL,42.468552),
 (@sid,'2026-08-27',NULL,NULL,NULL,42.437645,42.468552,42.437645,199933,NULL,NULL,42.437645),
 (@sid,'2026-08-28',NULL,NULL,NULL,42.009793,42.437645,42.009793,835085,NULL,NULL,42.009793);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,42.114058,42.009793,42.114058,1049164,NULL,NULL,42.114058),
 (@sid,'2026-09-01',NULL,NULL,NULL,41.894703,42.114058,41.894703,295772,NULL,NULL,41.894703),
 (@sid,'2026-09-02',NULL,NULL,NULL,41.903067,41.894703,41.903067,820685,NULL,NULL,41.903067),
@@ -17910,7 +17923,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,37.475684,38.284587,37.475684,782298,NULL,NULL,37.475684);
 -- INR
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='INR' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1.000000,0.999001,1.000000,482089,NULL,NULL,1.000000),
 (@sid,'2024-10-01',NULL,NULL,NULL,1.000000,1.000000,1.000000,489543,NULL,NULL,1.000000),
 (@sid,'2024-10-02',NULL,NULL,NULL,1.000000,1.000000,1.000000,756308,NULL,NULL,1.000000),
@@ -18161,7 +18174,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,1.000000,1.000000,1.000000,568444,NULL,NULL,1.000000),
 (@sid,'2025-09-11',NULL,NULL,NULL,1.000000,1.000000,1.000000,309639,NULL,NULL,1.000000),
 (@sid,'2025-09-12',NULL,NULL,NULL,1.000000,1.000000,1.000000,710160,NULL,NULL,1.000000);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,1.000000,1.000000,1.000000,312214,NULL,NULL,1.000000),
 (@sid,'2025-09-16',NULL,NULL,NULL,1.000000,1.000000,1.000000,478591,NULL,NULL,1.000000),
 (@sid,'2025-09-17',NULL,NULL,NULL,1.000000,1.000000,1.000000,506558,NULL,NULL,1.000000),
@@ -18412,7 +18425,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1.000000,1.000000,1.000000,760944,NULL,NULL,1.000000),
 (@sid,'2026-08-27',NULL,NULL,NULL,1.000000,1.000000,1.000000,523474,NULL,NULL,1.000000),
 (@sid,'2026-08-28',NULL,NULL,NULL,1.000000,1.000000,1.000000,621269,NULL,NULL,1.000000);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1.000000,1.000000,1.000000,504959,NULL,NULL,1.000000),
 (@sid,'2026-09-01',NULL,NULL,NULL,1.000000,1.000000,1.000000,645890,NULL,NULL,1.000000),
 (@sid,'2026-09-02',NULL,NULL,NULL,1.000000,1.000000,1.000000,329483,NULL,NULL,1.000000),
@@ -18435,7 +18448,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1.000000,1.000000,1.000000,441498,NULL,NULL,1.000000);
 -- USD
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='USD' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,0.995821,1.000009,0.995821,508455,NULL,NULL,0.995821),
 (@sid,'2024-10-01',NULL,NULL,NULL,0.999311,0.995821,0.999311,387424,NULL,NULL,0.999311),
 (@sid,'2024-10-02',NULL,NULL,NULL,0.995766,0.999311,0.995766,948508,NULL,NULL,0.995766),
@@ -18686,7 +18699,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,0.919608,0.933198,0.919608,504563,NULL,NULL,0.919608),
 (@sid,'2025-09-11',NULL,NULL,NULL,0.928746,0.919608,0.928746,401561,NULL,NULL,0.928746),
 (@sid,'2025-09-12',NULL,NULL,NULL,0.921210,0.928746,0.921210,291820,NULL,NULL,0.921210);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,0.916459,0.921210,0.916459,631357,NULL,NULL,0.916459),
 (@sid,'2025-09-16',NULL,NULL,NULL,0.920671,0.916459,0.920671,623070,NULL,NULL,0.920671),
 (@sid,'2025-09-17',NULL,NULL,NULL,0.919063,0.920671,0.919063,375986,NULL,NULL,0.919063),
@@ -18937,7 +18950,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1.090433,1.096235,1.090433,517630,NULL,NULL,1.090433),
 (@sid,'2026-08-27',NULL,NULL,NULL,1.096370,1.090433,1.096370,378495,NULL,NULL,1.096370),
 (@sid,'2026-08-28',NULL,NULL,NULL,1.091457,1.096370,1.091457,403435,NULL,NULL,1.091457);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1.095156,1.091457,1.095156,418765,NULL,NULL,1.095156),
 (@sid,'2026-09-01',NULL,NULL,NULL,1.091655,1.095156,1.091655,546425,NULL,NULL,1.091655),
 (@sid,'2026-09-02',NULL,NULL,NULL,1.086242,1.091655,1.086242,427623,NULL,NULL,1.086242),
@@ -18960,7 +18973,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,1.042705,1.035335,1.042705,828593,NULL,NULL,1.042705);
 -- EUR
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='EUR' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,0.992992,1.000025,0.992992,490580,NULL,NULL,0.992992),
 (@sid,'2024-10-01',NULL,NULL,NULL,0.991591,0.992992,0.991591,744260,NULL,NULL,0.991591),
 (@sid,'2024-10-02',NULL,NULL,NULL,0.993377,0.991591,0.993377,604224,NULL,NULL,0.993377),
@@ -19211,7 +19224,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,0.941624,0.949988,0.941624,592696,NULL,NULL,0.941624),
 (@sid,'2025-09-11',NULL,NULL,NULL,0.941163,0.941624,0.941163,400068,NULL,NULL,0.941163),
 (@sid,'2025-09-12',NULL,NULL,NULL,0.931034,0.941163,0.931034,613495,NULL,NULL,0.931034);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,0.912064,0.931034,0.912064,686552,NULL,NULL,0.912064),
 (@sid,'2025-09-16',NULL,NULL,NULL,0.907578,0.912064,0.907578,391435,NULL,NULL,0.907578),
 (@sid,'2025-09-17',NULL,NULL,NULL,0.890951,0.907578,0.890951,571396,NULL,NULL,0.890951),
@@ -19462,7 +19475,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,0.848458,0.861878,0.848458,891368,NULL,NULL,0.848458),
 (@sid,'2026-08-27',NULL,NULL,NULL,0.848061,0.848458,0.848061,289185,NULL,NULL,0.848061),
 (@sid,'2026-08-28',NULL,NULL,NULL,0.845384,0.848061,0.845384,519305,NULL,NULL,0.845384);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,0.844314,0.845384,0.844314,329164,NULL,NULL,0.844314),
 (@sid,'2026-09-01',NULL,NULL,NULL,0.850074,0.844314,0.850074,1323268,NULL,NULL,0.850074),
 (@sid,'2026-09-02',NULL,NULL,NULL,0.852670,0.850074,0.852670,800304,NULL,NULL,0.852670),
@@ -19485,7 +19498,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,0.800411,0.799010,0.800411,413964,NULL,NULL,0.800411);
 -- GBP
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='GBP' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1.000975,1.000000,1.000975,695165,NULL,NULL,1.000975),
 (@sid,'2024-10-01',NULL,NULL,NULL,0.998110,1.000975,0.998110,428440,NULL,NULL,0.998110),
 (@sid,'2024-10-02',NULL,NULL,NULL,1.002071,0.998110,1.002071,604428,NULL,NULL,1.002071),
@@ -19736,7 +19749,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,0.848610,0.848271,0.848610,888541,NULL,NULL,0.848610),
 (@sid,'2025-09-11',NULL,NULL,NULL,0.844992,0.848610,0.844992,1068170,NULL,NULL,0.844992),
 (@sid,'2025-09-12',NULL,NULL,NULL,0.841731,0.844992,0.841731,365770,NULL,NULL,0.841731);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,0.833112,0.841731,0.833112,698561,NULL,NULL,0.833112),
 (@sid,'2025-09-16',NULL,NULL,NULL,0.826146,0.833112,0.826146,450889,NULL,NULL,0.826146),
 (@sid,'2025-09-17',NULL,NULL,NULL,0.827015,0.826146,0.827015,923619,NULL,NULL,0.827015),
@@ -19987,7 +20000,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,0.776843,0.771512,0.776843,453470,NULL,NULL,0.776843),
 (@sid,'2026-08-27',NULL,NULL,NULL,0.770883,0.776843,0.770883,675202,NULL,NULL,0.770883),
 (@sid,'2026-08-28',NULL,NULL,NULL,0.772790,0.770883,0.772790,537228,NULL,NULL,0.772790);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,0.768867,0.772790,0.768867,392329,NULL,NULL,0.768867),
 (@sid,'2026-09-01',NULL,NULL,NULL,0.774783,0.768867,0.774783,967850,NULL,NULL,0.774783),
 (@sid,'2026-09-02',NULL,NULL,NULL,0.777681,0.774783,0.777681,682035,NULL,NULL,0.777681),
@@ -20010,7 +20023,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-25',NULL,NULL,NULL,0.808073,0.802326,0.808073,558477,NULL,NULL,0.808073);
 -- JPY
 SET @sid=(SELECT security_id FROM security_details WHERE symbol='JPY' LIMIT 1);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2024-09-30',NULL,NULL,NULL,1.001176,1.000001,1.001176,481591,NULL,NULL,1.001176),
 (@sid,'2024-10-01',NULL,NULL,NULL,1.006638,1.001176,1.006638,334875,NULL,NULL,1.006638),
 (@sid,'2024-10-02',NULL,NULL,NULL,0.998194,1.006638,0.998194,532475,NULL,NULL,0.998194),
@@ -20261,7 +20274,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2025-09-10',NULL,NULL,NULL,1.299803,1.312743,1.299803,409816,NULL,NULL,1.299803),
 (@sid,'2025-09-11',NULL,NULL,NULL,1.297043,1.299803,1.297043,548853,NULL,NULL,1.297043),
 (@sid,'2025-09-12',NULL,NULL,NULL,1.278017,1.297043,1.278017,626929,NULL,NULL,1.278017);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2025-09-15',NULL,NULL,NULL,1.283231,1.278017,1.283231,550826,NULL,NULL,1.283231),
 (@sid,'2025-09-16',NULL,NULL,NULL,1.273413,1.283231,1.273413,866216,NULL,NULL,1.273413),
 (@sid,'2025-09-17',NULL,NULL,NULL,1.268206,1.273413,1.268206,623857,NULL,NULL,1.268206),
@@ -20512,7 +20525,7 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-08-26',NULL,NULL,NULL,1.448463,1.438912,1.448463,264910,NULL,NULL,1.448463),
 (@sid,'2026-08-27',NULL,NULL,NULL,1.452113,1.448463,1.452113,415277,NULL,NULL,1.452113),
 (@sid,'2026-08-28',NULL,NULL,NULL,1.491844,1.452113,1.491844,343287,NULL,NULL,1.491844);
-INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price) VALUES
 (@sid,'2026-08-31',NULL,NULL,NULL,1.481386,1.491844,1.481386,769479,NULL,NULL,1.481386),
 (@sid,'2026-09-01',NULL,NULL,NULL,1.492614,1.481386,1.492614,426656,NULL,NULL,1.492614),
 (@sid,'2026-09-02',NULL,NULL,NULL,1.502935,1.492614,1.502935,517070,NULL,NULL,1.502935),
@@ -20533,7 +20546,86 @@ INSERT INTO daily_prices (security_id,trade_date,open_price,high_price,low_price
 (@sid,'2026-09-23',NULL,NULL,NULL,1.551437,1.548213,1.551437,564081,NULL,NULL,1.551437),
 (@sid,'2026-09-24',NULL,NULL,NULL,1.553379,1.551437,1.553379,430312,NULL,NULL,1.553379),
 (@sid,'2026-09-25',NULL,NULL,NULL,1.574487,1.553379,1.574487,515409,NULL,NULL,1.574487);
+
+-- Additional direct equities: generated weekday OHLCV demo rows for the full two-year window.
+INSERT IGNORE INTO daily_prices (security_id,trade_date,open_price,high_price,low_price,close_price,prev_close,last_price,volume,nav,spot_price,valuation_price)
+WITH RECURSIVE calendar AS (
+	SELECT CAST('2024-09-30' AS DATE) AS trade_date
+	UNION ALL
+	SELECT trade_date + INTERVAL 1 DAY
+	FROM calendar
+	WHERE trade_date < '2026-09-25'
+),
+trading_days AS (
+	SELECT trade_date, ROW_NUMBER() OVER (ORDER BY trade_date) AS day_no
+	FROM calendar
+	WHERE DAYOFWEEK(trade_date) BETWEEN 2 AND 6
+),
+asset_parameters AS (
+	SELECT security_id, symbol,
+		CASE symbol
+			WHEN 'COFORGE' THEN 7200.00
+			WHEN 'PERSISTENT' THEN 5600.00
+			WHEN 'POLYCAB' THEN 6500.00
+			WHEN 'BLS' THEN 390.00
+			WHEN 'DATAPATTNS' THEN 2700.00
+			WHEN 'SANSERA' THEN 1550.00
+		END AS base_price,
+		CASE symbol
+			WHEN 'COFORGE' THEN 0.16
+			WHEN 'PERSISTENT' THEN 0.19
+			WHEN 'POLYCAB' THEN 0.14
+			WHEN 'BLS' THEN 0.20
+			WHEN 'DATAPATTNS' THEN 0.18
+			WHEN 'SANSERA' THEN 0.17
+		END AS annual_drift,
+		CASE WHEN symbol IN ('BLS', 'DATAPATTNS', 'SANSERA') THEN 0.16 ELSE 0.12 END AS volatility,
+		CASE symbol
+			WHEN 'COFORGE' THEN 0.4
+			WHEN 'PERSISTENT' THEN 1.3
+			WHEN 'POLYCAB' THEN 2.1
+			WHEN 'BLS' THEN 0.8
+			WHEN 'DATAPATTNS' THEN 1.7
+			WHEN 'SANSERA' THEN 2.5
+		END AS phase
+	FROM security_details
+	WHERE symbol IN ('COFORGE', 'PERSISTENT', 'POLYCAB', 'BLS', 'DATAPATTNS', 'SANSERA')
+),
+price_path AS (
+	SELECT p.security_id, p.symbol, d.trade_date, d.day_no,
+		ROUND(p.base_price * EXP(p.annual_drift * d.day_no / 252.0
+			+ p.volatility * (SIN(d.day_no * 0.071 + p.phase)
+			+ 0.35 * SIN(d.day_no * 0.19 + p.phase * 0.6))), 6) AS close_price
+	FROM asset_parameters p
+	CROSS JOIN trading_days d
+),
+price_with_previous AS (
+	SELECT security_id, trade_date, day_no, close_price,
+		COALESCE(LAG(close_price) OVER (PARTITION BY security_id ORDER BY trade_date), close_price) AS prev_close
+	FROM price_path
+),
+daily_values AS (
+	SELECT security_id, trade_date, day_no, close_price, prev_close,
+		ROUND(prev_close + (close_price - prev_close) * (0.4 + 0.15 * SIN(day_no * 0.31)), 6) AS open_price,
+		CAST(50000 + 300000 * ABS(SIN(day_no * 0.173 + security_id)) AS UNSIGNED) AS volume
+	FROM price_with_previous
+)
+SELECT security_id, trade_date,
+	open_price,
+	ROUND(GREATEST(open_price, close_price) * (1 + 0.003 + 0.002 * ABS(SIN(day_no * 0.17))), 6) AS high_price,
+	ROUND(LEAST(open_price, close_price) * (1 - 0.003 - 0.002 * ABS(COS(day_no * 0.13))), 6) AS low_price,
+	close_price, prev_close, close_price AS last_price, volume, NULL, NULL, close_price
+FROM daily_values;
+
 SELECT COUNT(*) AS total_daily_price_rows FROM daily_prices;
-SELECT sd.asset_type,COUNT(dp.id) rows_count,MIN(dp.trade_date) first_date,MAX(dp.trade_date) last_date FROM security_details sd LEFT JOIN daily_prices dp ON dp.security_id=sd.security_id GROUP BY sd.asset_type ORDER BY sd.asset_type;
-SELECT sd.symbol,COUNT(dp.id) rows_count,MIN(dp.trade_date) first_date,MAX(dp.trade_date) last_date FROM security_details sd LEFT JOIN daily_prices dp ON dp.security_id=sd.security_id WHERE sd.symbol<>'RELIANCE' GROUP BY sd.symbol ORDER BY sd.symbol;
+SELECT sd.asset_type,COUNT(dp.id) rows_count,MIN(dp.trade_date) first_date,MAX(dp.trade_date) last_date
+FROM security_details sd
+LEFT JOIN daily_prices dp ON dp.security_id=sd.security_id AND dp.trade_date BETWEEN '2024-09-30' AND '2026-09-25'
+WHERE sd.symbol<>'RELIANCE'
+GROUP BY sd.asset_type ORDER BY sd.asset_type;
+SELECT sd.symbol,sd.equity_category,COUNT(dp.id) rows_count,MIN(dp.trade_date) first_date,MAX(dp.trade_date) last_date
+FROM security_details sd
+LEFT JOIN daily_prices dp ON dp.security_id=sd.security_id AND dp.trade_date BETWEEN '2024-09-30' AND '2026-09-25'
+WHERE sd.symbol<>'RELIANCE'
+GROUP BY sd.symbol,sd.equity_category ORDER BY sd.symbol;
 COMMIT;

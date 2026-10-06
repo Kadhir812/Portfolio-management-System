@@ -2,6 +2,8 @@ package com.hexaware.portfolio.security.entity;
 
 import java.time.LocalDateTime;
 
+import com.hexaware.portfolio.portfolio_backend.entity.enums.EquityCategory;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -29,6 +31,10 @@ public class SecurityDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "asset_type", nullable = false, length = 20, columnDefinition = "varchar(20)")
     private AssetType assetType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "equity_category", length = 30)
+    private EquityCategory equityCategory;
 
     @Column(name = "isin", unique = true, length = 12)
     private String isin;

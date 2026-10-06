@@ -1,162 +1,115 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Trash2, ArrowUpRight, Pencil } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { LayoutDashboard, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { api } from '../api/client';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Card } from '../components/ui/card';
+import { GridCard } from '../components/grid/GridCard';
+import { Pill, actionsCol, moneyCol, textCol } from '../components/grid/columns';
+import { Notice } from '../components/Notice';
+import { PageHeader } from '../components/PageHeader';
+import { StatTile } from '../components/StatTile';
+import { Button, buttonVariants } from '../components/ui/button';
+import { compactMoney, titleCase } from '../lib/format';
 
-const formatLabel = (value) => value
-  ? value.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-  : 'Not set';
+const STATUS_TONE = { NEW: 'info', ACTIVE: 'good', CLOSED: 'neutral' };
 
 export function PortfoliosPage() {
+  const navigate = useNavigate();
   const [portfolios, setPortfolios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const data = await api.portfolios.list();
-        setPortfolios(data);
-      } catch (e) {
-        setError(e.message || 'Unable to load portfolios');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+    api.portfolios.list()
+      .then(setPortfolios)
+      .catch((e) => setError(e.message || 'Unable to load portfolios'))
+      .finally(() => setLoading(false));
   }, []);
 
-  const removePortfolio = async (portfolioId) => {
-    const confirmed = window.confirm('Delete this portfolio?');
-    if (!confirmed) return;
-
+  const remove = async (portfolio) => {
+    if (!window.confirm(`Delete "${portfolio.name}"? This cannot be undone.`)) return;
     try {
-      await api.portfolios.remove(portfolioId);
-      setPortfolios((current) => current.filter((item) => item.id !== portfolioId));
+      setError('');
+      await api.portfolios.remove(portfolio.id);
+      setPortfolios((list) => list.filter((item) => item.id !== portfolio.id));
     } catch (e) {
       setError(e.message || 'Unable to delete portfolio');
     }
   };
 
+  // Status is edited in the grid itself
+  const changeStatus = async ({ data, newValue, oldValue, node }) => {
+    if (newValue === oldValue) return;
+    if (newValue !== 'CLOSED') {
+      node.setDataValue('status', oldValue);
+      return;
+    }
+    try {
+      setError('');
+      const updated = await api.portfolios.close(data.id);
+      setPortfolios((list) => list.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (e) {
+      setError(e.message || 'Unable to update status');
+      node.setDataValue('status', oldValue);
+    }
+  };
+
+  const rows = useMemo(() => portfolios.map((p) => ({ ...p, status: p.status || (p.holdingsSaved ? 'ACTIVE' : 'NEW'), amount: Number(p.amount || 0) })), [portfolios]);
+  const columns = useMemo(() => [
+    textCol('name', 'Portfolio', { cellClass: 'font-semibold', minWidth: 190 }),
+    textCol('status', 'Status', {
+      minWidth: 130,
+      editable: ({ data }) => data.status !== 'CLOSED',
+      singleClickEdit: true,
+      cellEditor: 'agSelectCellEditor',
+      cellEditorParams: ({ data }) => ({ values: [data.status, 'CLOSED'] }),
+      onCellValueChanged: changeStatus,
+      cellRenderer: ({ value }) => <Pill tone={STATUS_TONE[value]}>{titleCase(value)}</Pill>
+    }),
+    textCol('theme', 'Theme', { valueFormatter: ({ value }) => (value ? titleCase(value) : 'Not set'), minWidth: 190 }),
+    moneyCol('amount', 'Investment', 'INR'),
+    textCol('currency', 'Currency', { minWidth: 100 }),
+    textCol('benchmark', 'Benchmark'),
+    textCol('exchange', 'Exchange', { minWidth: 100 }),
+    textCol('rebalanceFrequency', 'Rebalance', { valueFormatter: ({ value }) => titleCase(value) }),
+    textCol('purchaseDate', 'Purchase date'),
+    actionsCol(({ data }) => (
+      <div className="flex gap-1">
+        <Button size="icon" variant="ghost" title="Dashboard" aria-label={`Open ${data.name} dashboard`} onClick={() => navigate(`/portfolios/${data.id}`)}><LayoutDashboard /></Button>
+        <Button size="icon" variant="ghost" title="Holdings" aria-label={`Open ${data.name} holdings`} onClick={() => navigate(`/portfolios/${data.id}/holdings`)}><Wallet /></Button>
+        <Button size="icon" variant="ghost" title="Edit" aria-label={`Edit ${data.name}`} disabled={data.status === 'CLOSED'} onClick={() => navigate(`/portfolios/${data.id}/edit`)}><Pencil /></Button>
+        <Button size="icon" variant="ghost" className="text-neg hover:bg-neg/10 hover:text-neg" title={data.status === 'CLOSED' ? 'Delete portfolio' : 'Close the portfolio before deleting'} aria-label={`Delete ${data.name}`} disabled={data.status !== 'CLOSED'} onClick={() => remove(data)}><Trash2 /></Button>
+      </div>
+    ), 170)
+  ], []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const active = rows.filter((p) => p.status === 'ACTIVE');
+  const invested = rows.reduce((sum, p) => sum + p.amount, 0);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Portfolio workspace</p>
-          <h2 className="mt-1 text-3xl font-bold">Portfolios</h2>
-        </div>
-        <Link to="/portfolios/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create portfolio
-          </Button>
-        </Link>
+    <>
+      <PageHeader title="Portfolios" description="Every portfolio you manage. Double-check status here, or open one to see its dashboard.">
+        <Link to="/portfolios/new" className={buttonVariants()}><Plus /> Create portfolio</Link>
+      </PageHeader>
+      <Notice tone="error">{error}</Notice>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="Portfolios" value={rows.length} />
+        <StatTile label="Active" value={active.length} tone={active.length ? 'pos' : undefined} />
+        <StatTile label="Not started" value={rows.filter((p) => p.status === 'NEW').length} sub="Waiting for holdings" />
+        <StatTile label="Total invested" value={compactMoney(invested)} sub="Across all portfolios" />
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
-          {error}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className="animate-pulse p-5">
-              <div className="mb-6 h-28 rounded-2xl bg-muted" />
-              <div className="mb-3 h-4 w-1/2 rounded bg-muted" />
-              <div className="mb-2 h-3 w-3/4 rounded bg-muted" />
-              <div className="h-3 w-2/3 rounded bg-muted" />
-            </Card>
-          ))}
-        </div>
-      ) : (
-        portfolios.length === 0 ? (
-          <Card className="border-dashed p-10 text-center">
-            <h3 className="text-xl font-semibold">No portfolios yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Create your first portfolio to start tracking allocations and holdings.</p>
-            <Link to="/portfolios/new" className="mt-5 inline-flex">
-              <Button className="gap-2"><Plus className="h-4 w-4" />Create portfolio</Button>
-            </Link>
-          </Card>
-        ) : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {portfolios.map((portfolio) => {
-            const status = portfolio.holdingsSaved
-              ? { tone: 'success', label: 'Saved' }
-              : { tone: 'info', label: 'In progress' };
-
-            return (
-              <Card key={portfolio.id} className="overflow-hidden p-0">
-                <div className="relative h-28 border-b border-border bg-gradient-to-br from-muted via-background to-muted p-4">
-                  <div className="absolute right-4 top-4">
-                    <Badge variant={status.tone}>{status.label}</Badge>
-                  </div>
-                  <div className="absolute inset-x-4 bottom-4 flex items-end gap-2">
-                    {[30, 45, 60, 75, 93].map((height, index) => (
-                      <div key={index} className="flex-1 rounded-t-xl bg-foreground" style={{ height: `${height}%`, opacity: 0.15 + index * 0.12 }} />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold">{portfolio.name}</h3>
-                      <p className="text-sm text-muted-foreground">{formatLabel(portfolio.theme)}</p>
-                    </div>
-                    <Badge variant="outline">{formatLabel(portfolio.rebalanceFrequency)}</Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-                    <div className="rounded-2xl border border-border bg-muted/50 p-3">
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Investment</p>
-                        <p className="mt-2 font-semibold text-foreground">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: portfolio.currency || 'INR', maximumFractionDigits: 0 }).format(portfolio.amount || 0)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-muted/50 p-3">
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Benchmark</p>
-                      <p className="mt-2 font-semibold text-foreground">{portfolio.benchmark || 'NIFTY50'}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-1">
-                    <Link to={`/portfolios/${portfolio.id}`} className="flex-1">
-                      <Button variant="secondary" className="w-full gap-2">
-                        Open dashboard
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <Link to={`/portfolios/${portfolio.id}/holdings`}>
-                        <Button variant="outline" className="w-full">Holdings</Button>
-                      </Link>
-                      <Link to={`/portfolios/${portfolio.id}/edit`}>
-                        <Button variant="outline" className="w-full gap-2" aria-label={`Edit ${portfolio.name}`}>
-                          <Pencil className="h-4 w-4" />
-                          Edit
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2 text-red-600 hover:bg-red-500/10 hover:text-red-600"
-                        onClick={() => removePortfolio(portfolio.id)}
-                        aria-label={`Delete ${portfolio.name}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
+      <GridCard
+        title="All portfolios"
+        exportName="portfolios"
+        rowData={rows}
+        columnDefs={columns}
+        loading={loading}
+        getRowId={({ data }) => String(data.id)}
+        height={Math.min(Math.max(rows.length * 46 + 130, 300), 560)}
+        emptyMessage="No portfolios yet. Create one to start tracking allocations."
+        onRowDoubleClicked={({ data }) => navigate(`/portfolios/${data.id}`)}
+      />
+    </>
   );
 }

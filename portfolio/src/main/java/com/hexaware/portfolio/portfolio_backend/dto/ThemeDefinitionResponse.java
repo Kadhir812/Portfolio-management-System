@@ -8,6 +8,7 @@ public record ThemeDefinitionResponse(
         InvestmentThemes theme,
         String label,
         List<ThemeAllocationResponse> allocations,
+        List<EquityCategoryAllocationResponse> equityAllocations,
         String risk,
         String investmentHorizon,
         String description) {

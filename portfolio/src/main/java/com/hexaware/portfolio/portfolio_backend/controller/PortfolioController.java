@@ -49,6 +49,11 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioService.update(portfolioId, request));
     }
 
+    @PostMapping("/{portfolioId}/close")
+    public ResponseEntity<Portfolio> close(@PathVariable Long portfolioId) {
+        return ResponseEntity.ok(portfolioService.close(portfolioId));
+    }
+
     @DeleteMapping("/{portfolioId}")
     public ResponseEntity<Void> delete(@PathVariable Long portfolioId) {
         portfolioService.delete(portfolioId);

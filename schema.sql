@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS app_users (
 CREATE TABLE IF NOT EXISTS security_details (
     security_id BIGINT NOT NULL AUTO_INCREMENT,
     asset_type VARCHAR(20) NOT NULL,
+    equity_category VARCHAR(30) NULL,
     isin VARCHAR(12) NULL,
     symbol VARCHAR(50) NULL,
     series VARCHAR(10) NULL,
@@ -98,6 +99,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
     ) NULL,
     purchase_date DATE NOT NULL,
     holdings_saved BOOLEAN NOT NULL DEFAULT FALSE,
+    status ENUM('NEW', 'ACTIVE', 'CLOSED') NOT NULL DEFAULT 'NEW',
     created_at DATETIME(6) NULL,
     updated_at DATETIME(6) NULL,
     PRIMARY KEY (id),
@@ -125,6 +127,19 @@ CREATE TABLE IF NOT EXISTS theme_allocations (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS theme_equity_allocations (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    theme_id BIGINT NOT NULL,
+    equity_category VARCHAR(30) NOT NULL,
+    percentage DECIMAL(5,2) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_theme_equity_allocations_theme_category UNIQUE (theme_id, equity_category),
+    CONSTRAINT ck_theme_equity_allocations_percentage_range CHECK (percentage >= 0 AND percentage <= 100),
+    CONSTRAINT fk_theme_equity_allocations_theme FOREIGN KEY (theme_id)
+        REFERENCES investment_themes (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS portfolio_holdings (
     id BIGINT NOT NULL AUTO_INCREMENT,
     portfolio_id BIGINT NOT NULL,
@@ -133,6 +148,7 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
     security_name VARCHAR(255) NULL,
     symbol VARCHAR(255) NULL,
     asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    equity_category VARCHAR(30) NULL,
     shares DECIMAL(24,8) NOT NULL,
     price DECIMAL(20,6) NOT NULL,
     value DECIMAL(20,2) NOT NULL,
@@ -158,6 +174,7 @@ CREATE TABLE IF NOT EXISTS portfolio_trades (
     symbol VARCHAR(255) NULL,
     security_name VARCHAR(255) NULL,
     asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    equity_category VARCHAR(30) NULL,
     signed_shares DECIMAL(24,8) NOT NULL,
     unit_price DECIMAL(20,6) NOT NULL,
     trade_date DATE NOT NULL,

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.EquityCategory;
 import com.hexaware.portfolio.security.entity.SecurityDetails;
 
 import jakarta.persistence.Column;
@@ -61,7 +62,10 @@ public class PortfolioTrade {
     private String securityName;
     @Enumerated(EnumType.STRING)
     @Column(name = "asset_class", nullable = false)
-        private AssetClass assetClass;
+    private AssetClass assetClass;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "equity_category", length = 30)
+    private EquityCategory equityCategory;
     @Column(name = "signed_shares", nullable = false, precision = 24, scale = 8)
     private BigDecimal signedShares;
     @Column(name = "unit_price", nullable = false, precision = 20, scale = 6)

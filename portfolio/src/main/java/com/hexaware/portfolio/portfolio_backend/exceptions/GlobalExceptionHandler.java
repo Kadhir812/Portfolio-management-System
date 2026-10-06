@@ -10,9 +10,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(PortfolioValidationException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(
@@ -64,10 +68,20 @@ public class GlobalExceptionHandler {
                 "The operation conflicts with existing related records or database constraints", request);
     }
 
+        @ExceptionHandler(DataAccessException.class)
+        public ResponseEntity<ApiErrorResponse> handleDatabaseFailure(
+            DataAccessException exception,
+            HttpServletRequest request) {
+        logger.error("Database failure while processing {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return buildError(HttpStatus.SERVICE_UNAVAILABLE,
+            "Database request failed; check database availability and connection settings", request);
+        }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(
             Exception exception,
             HttpServletRequest request) {
+        logger.error("Unhandled exception while processing {} {}", request.getMethod(), request.getRequestURI(), exception);
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request);
     }
 

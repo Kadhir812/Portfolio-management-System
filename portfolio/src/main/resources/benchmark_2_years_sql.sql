@@ -2,14 +2,8 @@ USE portfolio_db;
 
 START TRANSACTION;
 
-DELETE p
-FROM benchmark_daily_prices p
-JOIN benchmark_indices b ON b.benchmark_id = p.benchmark_id
-WHERE b.index_code IN ('SP500', 'NASDAQ100', 'NIFTY50', 'SENSEX', 'FTSE100', 'DAX')
-	AND p.trade_date BETWEEN '2024-09-30' AND '2026-09-25';
-
 -- S&P 500
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (1,'2024-09-30',5736.780990,5737.898530,5726.371830,5733.415167,5738.170000,-4.754833,-0.082863,1082863,NOW()),
 (1,'2024-10-01',5721.396239,5732.658496,5718.719537,5729.326565,5733.415167,-4.088601,-0.071312,1071311,NOW()),
 (1,'2024-10-02',5730.256084,5732.585554,5710.006058,5721.656654,5729.326565,-7.669911,-0.133871,1133871,NOW()),
@@ -512,7 +506,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (1,'2026-08-28',6063.873157,6067.736748,6012.373430,6020.437521,6071.203255,-50.765734,-0.836173,1836172,NOW());
 
 -- S&P 500
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (1,'2026-08-31',6030.139442,6061.627949,6021.364914,6060.005630,6020.437521,39.568109,0.657230,1657229,NOW()),
 (1,'2026-09-01',6067.728533,6174.207168,6051.687779,6156.936687,6060.005630,96.931057,1.599521,2599520,NOW()),
 (1,'2026-09-02',6150.462293,6179.276039,6125.284594,6126.074471,6156.936687,-30.862216,-0.501259,1501259,NOW()),
@@ -535,7 +529,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (1,'2026-09-25',5985.405209,5987.732066,5960.987515,5986.076377,5980.778735,5.297642,0.088578,1088577,NOW());
 
 -- NASDAQ-100
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (2,'2024-09-30',19582.501165,19605.187341,19411.098927,19443.110433,19600.000000,-156.889567,-0.800457,1800456,NOW()),
 (2,'2024-10-01',19488.513263,19552.450525,19205.853034,19206.129585,19443.110433,-236.980848,-1.218842,2218842,NOW()),
 (2,'2024-10-02',19181.666264,19230.575935,19056.116693,19157.283794,19206.129585,-48.845791,-0.254324,1254323,NOW()),
@@ -1038,7 +1032,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (2,'2026-08-28',20068.763097,20191.812676,20062.725075,20180.774781,20058.744547,122.030234,0.608364,1608364,NOW());
 
 -- NASDAQ-100
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (2,'2026-08-31',20250.428122,20292.133111,19758.069617,19793.539765,20180.774781,-387.235016,-1.918831,2918831,NOW()),
 (2,'2026-09-01',19746.866494,19824.436907,19712.954806,19740.479478,19793.539765,-53.060288,-0.268069,1268068,NOW()),
 (2,'2026-09-02',19710.998640,19730.381218,19561.702945,19623.332803,19740.479478,-117.146675,-0.593434,1593433,NOW()),
@@ -1061,7 +1055,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (2,'2026-09-25',19910.466255,20002.561531,19772.769826,19820.231012,19969.632398,-149.401386,-0.748143,1748142,NOW());
 
 -- NIFTY 50
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (3,'2024-09-30',26205.387913,26236.024932,25998.826759,26022.635581,26200.000000,-177.364419,-0.676963,1676963,NOW()),
 (3,'2024-10-01',26003.332796,26355.451204,25972.595408,26306.501472,26022.635581,283.865891,1.090842,2090842,NOW()),
 (3,'2024-10-02',26367.658584,26434.268848,26343.528137,26410.775066,26306.501472,104.273593,0.396380,1396379,NOW()),
@@ -1564,7 +1558,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (3,'2026-08-28',24736.613275,24950.499975,24699.590417,24944.635021,24687.351775,257.283246,1.042166,2042166,NOW());
 
 -- NIFTY 50
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (3,'2026-08-31',24896.513982,24908.367733,24810.910546,24892.448608,24944.635021,-52.186413,-0.209209,1209208,NOW()),
 (3,'2026-09-01',24862.786873,24925.437946,24770.079147,24779.636877,24892.448608,-112.811731,-0.453197,1453196,NOW()),
 (3,'2026-09-02',24803.812638,24818.164604,24529.491945,24607.064593,24779.636877,-172.572285,-0.696428,1696427,NOW()),
@@ -1587,7 +1581,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (3,'2026-09-25',23836.894189,24022.068442,23813.278598,23988.185774,23857.523246,130.662528,0.547679,1547678,NOW());
 
 -- BSE Sensex
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (4,'2024-09-30',85586.965726,85646.759021,85069.672506,85165.061894,85500.000000,-334.938106,-0.391740,1391740,NOW()),
 (4,'2024-10-01',85036.946683,85083.267779,84671.414671,84700.536691,85165.061894,-464.525202,-0.545441,1545441,NOW()),
 (4,'2024-10-02',84801.818976,84932.662254,84515.000160,84531.237036,84700.536691,-169.299655,-0.199880,1199880,NOW()),
@@ -2090,7 +2084,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (4,'2026-08-28',78877.748787,79710.820216,78857.153963,79680.619795,78907.080264,773.539531,0.980317,1980317,NOW());
 
 -- BSE Sensex
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (4,'2026-08-31',79809.601372,79941.521989,79408.744150,79729.667244,79680.619795,49.047449,0.061555,1061555,NOW()),
 (4,'2026-09-01',79640.953808,79729.731434,79199.896593,79431.117305,79729.667244,-298.549939,-0.374453,1374452,NOW()),
 (4,'2026-09-02',79269.250416,79402.137561,78768.521588,78918.784280,79431.117305,-512.333025,-0.645003,1645002,NOW()),
@@ -2113,7 +2107,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (4,'2026-09-25',82963.802897,83098.553755,82858.357794,82870.211722,83096.953453,-226.741732,-0.272864,1272864,NOW());
 
 -- FTSE 100
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (5,'2024-09-30',8268.380481,8287.038952,8224.418485,8237.748404,8270.000000,-32.251596,-0.389983,1389983,NOW()),
 (5,'2024-10-01',8244.108577,8251.293300,8218.912754,8241.155325,8237.748404,3.406921,0.041357,1041357,NOW()),
 (5,'2024-10-02',8237.606095,8309.213988,8226.215656,8306.725249,8241.155325,65.569924,0.795640,1795639,NOW()),
@@ -2616,7 +2610,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (5,'2026-08-28',8558.518713,8560.047901,8492.080664,8498.316172,8550.977911,-52.661739,-0.615856,1615856,NOW());
 
 -- FTSE 100
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (5,'2026-08-31',8485.214862,8601.297458,8475.633272,8586.328466,8498.316172,88.012294,1.035644,2035643,NOW()),
 (5,'2026-09-01',8586.212941,8603.705854,8574.182641,8602.852292,8586.328466,16.523826,0.192443,1192443,NOW()),
 (5,'2026-09-02',8606.193246,8629.480409,8545.929648,8553.489385,8602.852292,-49.362907,-0.573797,1573796,NOW()),
@@ -2639,7 +2633,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (5,'2026-09-25',8718.219052,8719.974927,8617.863974,8623.850517,8720.802380,-96.951862,-1.111731,2111730,NOW());
 
 -- DAX
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (6,'2024-09-30',19342.331059,19381.007626,19307.462764,19321.535576,19400.000000,-78.464424,-0.404456,1404455,NOW()),
 (6,'2024-10-01',19383.138123,19445.956609,19296.193176,19298.915431,19321.535576,-22.620145,-0.117072,1117072,NOW()),
 (6,'2024-10-02',19318.193514,19469.543114,19285.494685,19408.946053,19298.915431,110.030622,0.570139,1570138,NOW()),
@@ -3142,7 +3136,7 @@ INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_valu
 (6,'2026-08-28',17813.063545,17986.611564,17806.476509,17957.970219,17825.200417,132.769802,0.744843,1744843,NOW());
 
 -- DAX
-INSERT INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
+INSERT IGNORE INTO benchmark_daily_prices (benchmark_id,trade_date,open_value,high_value,low_value,close_value,prev_close,change_value,change_percent,volume,created_at) VALUES
 (6,'2026-08-31',17952.098669,18000.968028,17852.796429,17898.206010,17957.970219,-59.764209,-0.332800,1332800,NOW()),
 (6,'2026-09-01',17851.497040,18202.517956,17837.361196,18162.372619,17898.206010,264.166610,1.475939,2475939,NOW()),
 (6,'2026-09-02',18230.898957,18516.026355,18227.498103,18498.559398,18162.372619,336.186779,1.851007,2851006,NOW()),

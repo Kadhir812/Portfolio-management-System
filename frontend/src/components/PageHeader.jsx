@@ -1,12 +1,12 @@
-export function PageHeader({ title, description, rightAction }) {
+export function PageHeader({ title, description, children, back }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-brand-100">Portfolio workspace</p>
-        <h2 className="mt-1 text-3xl font-bold text-white">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-slate-400">{description}</p> : null}
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        {back}
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        {description ? <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {rightAction ? <div>{rightAction}</div> : null}
+      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
     </div>
   );
 }

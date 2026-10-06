@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hexaware.portfolio.portfolio_backend.dto.AttachThemeRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.ThemeDefinitionResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.UpdateThemeDefinitionRequest;
 import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 import com.hexaware.portfolio.portfolio_backend.service.ThemeService;
 
 import lombok.AllArgsConstructor;
@@ -28,6 +30,13 @@ public class ThemeController {
     @GetMapping("/themes")
     public ResponseEntity<List<ThemeDefinitionResponse>> getThemes() {
         return ResponseEntity.ok(themeService.getAllThemes());
+    }
+
+    @PutMapping("/themes/{theme}/definition")
+    public ResponseEntity<ThemeDefinitionResponse> updateThemeDefinition(
+            @PathVariable InvestmentThemes theme,
+            @RequestBody UpdateThemeDefinitionRequest request) {
+        return ResponseEntity.ok(themeService.updateDefinition(theme, request));
     }
 
     @PutMapping("/portfolios/{portfolioId}/theme")

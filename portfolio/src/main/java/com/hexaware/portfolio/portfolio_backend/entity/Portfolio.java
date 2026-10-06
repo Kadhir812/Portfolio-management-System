@@ -10,6 +10,7 @@ import com.hexaware.portfolio.portfolio_backend.entity.enums.Currency;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.Exchange;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.InvestmentThemes;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioType;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.PortfolioStatus;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.RebalanceFrequency;
 import com.hexaware.portfolio.portfolio_backend.security.AppUser;
 
@@ -75,6 +76,10 @@ public class Portfolio {
 
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private PortfolioStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "theme", length = 40)

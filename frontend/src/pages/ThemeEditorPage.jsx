@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { api } from '../api/client';
-import { Save } from 'lucide-react';
-import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { GridCard } from '../components/grid/GridCard';
+import { Notice } from '../components/Notice';
+import { PageHeader } from '../components/PageHeader';
+import { ThemeEditor } from '../components/theme/ThemeEditor';
+import { themeColumns } from '../components/theme/themeColumns';
+import { Button } from '../components/ui/button';
 
 export function ThemeEditorPage() {
   const [themes, setThemes] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState('');
 
   useEffect(() => {
     api.themes.list()
@@ -16,60 +23,43 @@ export function ThemeEditorPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const columns = useMemo(() => themeColumns(), []);
+  const current = themes.find((theme) => theme.theme === selected);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Theme studio</p>
-          <h2 className="mt-1 text-3xl font-bold">Custom themes</h2>
-        </div>
-        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <Save className="h-4 w-4" />
-          Managed by backend
-        </span>
-      </div>
+    <>
+      <PageHeader title="Themes" description="A theme sets how much of a portfolio belongs in each asset class. Select a theme to edit it.">
+        <Button disabled={!current || editing} onClick={() => { setSaved(''); setEditing(true); }}><Pencil /> Edit theme</Button>
+      </PageHeader>
+      <Notice tone="error">{error}</Notice>
+      <Notice tone="success">{saved}</Notice>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {loading ? <p className="text-sm text-muted-foreground">Loading themes...</p> : null}
-      <div className="space-y-5">
-        {themes.map((theme) => (
-          <Card key={theme.theme}>
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <div>
-                  <CardTitle>{theme.label}</CardTitle>
-                <div className="mt-2 flex gap-2">
-                  <Badge variant="outline">{theme.risk}</Badge>
-                  <Badge variant="secondary">{theme.investmentHorizon}</Badge>
-                </div>
-              </div>
-            </CardHeader>
+      <GridCard
+        title="Investment themes"
+        subtitle={current ? `${current.label}: ${current.description || 'No description.'}` : 'Click a row to select it.'}
+        exportName="themes"
+        rowData={themes}
+        columnDefs={columns}
+        loading={loading}
+        getRowId={({ data }) => data.theme}
+        height={Math.min(themes.length * 46 + 70, 360)}
+        onRowClicked={({ data }) => { if (!editing) setSelected(data.theme); }}
+        rowClassRules={{ 'bg-primary/15': ({ data }) => data?.theme === selected }}
+        emptyMessage="No themes available. Check the backend connection."
+      />
 
-            <CardContent>
-              <div className="overflow-hidden rounded-xl border border-border">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-3 font-medium">Asset class</th>
-                      <th className="px-3 py-3 font-medium">Weight %</th>
-                      <th className="px-3 py-3 font-medium text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {theme.allocations.map((allocation, index) => (
-                      <tr key={`${theme.theme}-${allocation.assetClass}`} className="border-t border-border">
-                        <td className="px-3 py-3">{allocation.assetClass.replace('_', ' ')}</td>
-                        <td className="px-3 py-3">{allocation.percentage}%</td>
-                        <td className="px-3 py-3 text-right">Read-only</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+      {editing && current && (
+        <ThemeEditor
+          key={current.theme}
+          theme={current}
+          onCancel={() => setEditing(false)}
+          onSaved={(updated) => {
+            setThemes((list) => list.map((item) => (item.theme === updated.theme ? updated : item)));
+            setEditing(false);
+            setSaved(`${updated.label} saved.`);
+          }}
+        />
+      )}
+    </>
   );
 }

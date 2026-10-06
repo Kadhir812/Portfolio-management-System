@@ -53,8 +53,17 @@ public class ThemeDefinition {
     @OrderBy("id ASC")
     private List<ThemeAllocation> allocations = new ArrayList<>();
 
+    @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("id ASC")
+    private List<ThemeEquityAllocation> equityAllocations = new ArrayList<>();
+
     public void addAllocation(ThemeAllocation allocation) {
         allocations.add(allocation);
+        allocation.setTheme(this);
+    }
+
+    public void addEquityAllocation(ThemeEquityAllocation allocation) {
+        equityAllocations.add(allocation);
         allocation.setTheme(this);
     }
 }
