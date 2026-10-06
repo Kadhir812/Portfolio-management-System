@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,16 +22,19 @@ public class BenchmarkService {
     private final BenchmarkIndexRepository benchmarkIndexes;
     private final BenchmarkDailyPriceRepository dailyPrices;
 
+    @Cacheable(cacheNames = "benchmark-list", key = "'all'")
     public List<BenchmarkResponse> getAllBenchmarks() {
         return benchmarkIndexes.findAllByOrderByBenchmarkIdAsc().stream()
                 .map(BenchmarkResponse::from)
                 .toList();
     }
 
+    @Cacheable(cacheNames = "benchmark-detail", key = "#indexCode == null ? 'null' : #indexCode.toUpperCase()")
     public BenchmarkResponse getBenchmark(String indexCode) {
         return BenchmarkResponse.from(findBenchmark(indexCode));
     }
 
+    @Cacheable(cacheNames = "benchmark-prices", key = "(#indexCode == null ? 'null' : #indexCode.toUpperCase()) + ':' + #from + ':' + #to")
     public BenchmarkComparisonResponse getPrices(String indexCode, LocalDate from, LocalDate to) {
         if (from == null || to == null || from.isAfter(to)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The from date must be on or before the to date");

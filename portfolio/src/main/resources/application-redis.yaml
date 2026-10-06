@@ -1,0 +1,14 @@
+﻿# Redis Cloud settings. Store the password in REDIS_PASSWORD, not in this file.
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:history-muscle-kick-37023.db.redis.io}
+      port: ${REDIS_PORT:18596}
+      username: ${REDIS_USERNAME:default}
+      password: "${REDIS_PASSWORD:M4iFw3Ej2XBS23GUEv9ApwKTXxWt5QOP}"
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+      connect-timeout: 10s
+      timeout: 10s
+  cache:
+    type: redis
