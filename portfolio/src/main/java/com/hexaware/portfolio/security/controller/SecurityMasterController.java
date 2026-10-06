@@ -3,6 +3,7 @@ package com.hexaware.portfolio.security.controller;
 import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +23,7 @@ public class SecurityMasterController {
     private final SecurityDetailsService securities;
 
     @GetMapping
+    @Cacheable(cacheNames = "security-master", key = "'all'")
     public List<SecurityMasterResponse> list() {
         return securities.findAll().stream()
                 .map(SecurityMasterResponse::from)

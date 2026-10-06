@@ -74,14 +74,19 @@ public class PortfolioHolding {
 
     @Column(nullable = false, precision = 24, scale = 8)
     private BigDecimal shares;
+
     @Column(nullable = false, precision = 20, scale = 6)
     private BigDecimal price;
+
     @Column(nullable = false, precision = 20, scale = 2)
     private BigDecimal value;
+
     @Column(name = "price_date", nullable = false)
     private LocalDate priceDate;
+
     @Column(name = "created_at")
     private Instant createdAt;
+    
     @Column(name = "updated_at")
     private Instant updatedAt;
 }

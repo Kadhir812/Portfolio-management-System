@@ -1,6 +1,7 @@
 package com.hexaware.portfolio.security.dto;
 
 import com.hexaware.portfolio.security.entity.SecurityDetails;
+import com.hexaware.portfolio.portfolio_backend.entity.enums.AssetClass;
 import com.hexaware.portfolio.portfolio_backend.entity.enums.EquityCategory;
 
 public record SecurityMasterResponse(
@@ -13,8 +14,10 @@ public record SecurityMasterResponse(
         String country,
         String currency,
         String name,
-        String assetType,
+        AssetClass assetClass,
         EquityCategory equityCategory,
+        String sector,
+        String industry,
         String status) {
 
     public static SecurityMasterResponse from(SecurityDetails security) {
@@ -28,8 +31,10 @@ public record SecurityMasterResponse(
                 security.getCountry(),
                 security.getCurrency(),
                 security.getName(),
-                security.getAssetType() == null ? null : security.getAssetType().name(),
+                AssetClass.from(security.getAssetType()),
                 security.getEquityCategory(),
+                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getSectorName(),
+                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getIndustryName(),
                 security.getStatus());
     }
 }

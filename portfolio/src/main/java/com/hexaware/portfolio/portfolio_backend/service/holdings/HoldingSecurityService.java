@@ -52,16 +52,7 @@ public class HoldingSecurityService {
     }
 
     public AssetClass assetClass(AssetType type) {
-        return switch (type) {
-            case EQUITY -> AssetClass.STOCKS;
-            case MUTUAL -> AssetClass.MUTUAL_FUNDS;
-            case COMMODITY -> AssetClass.COMMODITIES;
-            case BOND -> AssetClass.BONDS;
-            case CRYPTO -> AssetClass.CRYPTO;
-            case REIT -> AssetClass.REITS;
-            case ETF -> AssetClass.ETFS;
-            case CASH -> AssetClass.CASH;
-        };
+        return AssetClass.from(type);
     }
 
     public DailyPrice latestPrice(Long securityId) {

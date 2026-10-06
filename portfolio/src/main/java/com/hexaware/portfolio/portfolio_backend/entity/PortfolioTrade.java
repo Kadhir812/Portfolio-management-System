@@ -56,22 +56,30 @@ public class PortfolioTrade {
     @JoinColumn(name = "security_id", nullable = false, insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_portfolio_trades_security"))
     private SecurityDetails security;
+
     private String isin;
     private String symbol;
+
     @Column(name = "security_name")
     private String securityName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "asset_class", nullable = false)
     private AssetClass assetClass;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "equity_category", length = 30)
     private EquityCategory equityCategory;
+
     @Column(name = "signed_shares", nullable = false, precision = 24, scale = 8)
     private BigDecimal signedShares;
+
     @Column(name = "unit_price", nullable = false, precision = 20, scale = 6)
     private BigDecimal unitPrice;
+
     @Column(name = "trade_date", nullable = false)
     private LocalDate tradeDate;
+    
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }

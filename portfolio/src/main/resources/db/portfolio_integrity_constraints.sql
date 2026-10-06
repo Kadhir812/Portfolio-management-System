@@ -60,6 +60,12 @@ FROM theme_allocations
 GROUP BY theme_id, asset_class
 HAVING COUNT(*) > 1;
 
+SELECT 'theme allocation EQUITY/STOCKS conflict' AS issue, theme_id
+FROM theme_allocations
+WHERE asset_class IN ('EQUITY', 'STOCKS')
+GROUP BY theme_id
+HAVING COUNT(*) > 1;
+
 SELECT 'theme allocation invalid percentage' AS issue, id, theme_id, percentage
 FROM theme_allocations
 WHERE percentage IS NULL OR percentage < 0 OR percentage > 100;
@@ -118,9 +124,17 @@ ALTER TABLE portfolio_holdings
         MODIFY value DECIMAL(20,2) NOT NULL,
         MODIFY price_date DATE NOT NULL;
 
+ALTER TABLE portfolio_trades
+        MODIFY asset_class VARCHAR(40) NOT NULL;
+
 ALTER TABLE theme_allocations
         MODIFY asset_class VARCHAR(40) NOT NULL,
         MODIFY percentage DECIMAL(5,2) NOT NULL;
+
+-- Legacy data used the security type EQUITY where the portfolio asset class is STOCKS.
+UPDATE portfolio_holdings SET asset_class = 'STOCKS' WHERE asset_class = 'EQUITY';
+UPDATE portfolio_trades SET asset_class = 'STOCKS' WHERE asset_class = 'EQUITY';
+UPDATE theme_allocations SET asset_class = 'STOCKS' WHERE asset_class = 'EQUITY';
 
 -- 4. Add checks and unique keys only when Hibernate or an earlier run has not added them.
 SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.table_constraints

@@ -41,26 +41,51 @@ public class PortfolioHoldingService {
         this.securityService = securityService; this.allocationService = allocationService;
     }
 
-    public List<PortfolioHolding> getAll(Long portfolioId) { ownPortfolio(portfolioId); return holdings.findByPortfolioId(portfolioId); }
+    public List<PortfolioHolding> getAll(Long portfolioId) { 
+        ownPortfolio(portfolioId); return holdings.findByPortfolioId(portfolioId); 
+    }
+
     public PortfolioHolding getById(Long portfolioId, Long holdingId) {
         ownPortfolio(portfolioId);
-        return holdings.findByIdAndPortfolioId(holdingId, portfolioId).orElseThrow(() -> new PortfolioValidationException("Holding not found"));
+        return holdings.findByIdAndPortfolioId(holdingId, portfolioId)
+                        .orElseThrow(() -> new PortfolioValidationException("Holding not found"));
     }
+
     public PortfolioHoldingSummaryResponse getSummary(Long portfolioId) {
         List<PortfolioHolding> rows = getAll(portfolioId);
-        return new PortfolioHoldingSummaryResponse(rows.size(), rows.stream().map(PortfolioHolding::getValue).filter(Objects::nonNull).reduce(ZERO, BigDecimal::add));
+        return new PortfolioHoldingSummaryResponse(rows.size(), 
+        rows.stream()
+            .map(PortfolioHolding::getValue)
+            .filter(Objects::nonNull)
+            .reduce(ZERO, BigDecimal::add));
     }
+
     public List<EligibleSecurityResponse> getEligibleSecurities(Long portfolioId) {
         return getEligibleSecurities(portfolioId, null);
     }
+
     public List<EligibleSecurityResponse> getEligibleSecurities(Long portfolioId, LocalDate asOfDate) {
         Portfolio portfolio = ownPortfolio(portfolioId);
         Set<AssetClass> allowedAssetClasses = allocationService.allowedAssetClasses(portfolio);
-        return securities.findAll().stream().map(s -> {
+        return securities.findAll()
+            .stream()
+            .filter(security -> !isExcludedExchange(security.getExchange()))
+            .map(s -> {
             AssetClass assetClass = securityService.assetClass(s.getAssetType());
             if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(assetClass)) return null;
+
             Optional<DailyPrice> p = asOfDate == null ? Optional.ofNullable(securityService.latestPrice(s.getSecurityId())) : prices.findTopBySecurityIdAndTradeDateLessThanEqualOrderByTradeDateDesc(s.getSecurityId(), asOfDate);
-            return p.map(price -> new EligibleSecurityResponse(s.getSecurityId(), s.getIsin(), s.getSymbol(), s.getDescription(), assetClass, s.getEquityCategory(), securityService.priceValue(price), price.getTradeDate())).orElse(null);
+            return p.map(price -> new EligibleSecurityResponse(
+                s.getSecurityId(), 
+                s.getIsin(), 
+                s.getSymbol(), 
+                s.getDescription(), 
+                assetClass, 
+                s.getEquityCategory(), 
+                securityService.priceValue(price), 
+                price.getTradeDate()))
+                
+                .orElse(null);
         }).filter(Objects::nonNull).toList();
     }
 
@@ -72,6 +97,9 @@ public class PortfolioHoldingService {
         SecurityDetails s = request.securityId() != null
             ? securities.findById(request.securityId()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(request.securityId())))
             : securities.findByIsin(request.isin()).orElseThrow(() -> new SecurityNotFoundException(request.isin()));
+        if (isExcludedExchange(s.getExchange())) {
+            throw new PortfolioValidationException("Securities listed on LSE or NASDAQ cannot be added to holdings");
+        }
         Set<AssetClass> allowedAssetClasses = allocationService.allowedAssetClasses(p);
         if (!allowedAssetClasses.isEmpty() && !allowedAssetClasses.contains(securityService.assetClass(s.getAssetType()))) {
             throw new PortfolioValidationException("This security is not part of the portfolio's investment theme");
@@ -161,22 +189,70 @@ public class PortfolioHoldingService {
 
     @Transactional
     public PortfolioValuationResponse getValuation(Long portfolioId, LocalDate requestedDate) {
+        return getValuations(portfolioId, List.of(requestedDate == null ? LocalDate.now() : requestedDate)).get(0);
+    }
+
+    @Transactional
+    public List<PortfolioValuationResponse> getValuations(Long portfolioId, List<LocalDate> requestedDates) {
+        if (requestedDates == null || requestedDates.isEmpty() || requestedDates.size() > 25
+                || requestedDates.stream().anyMatch(Objects::isNull)) {
+            throw new PortfolioValidationException("Provide between 1 and 25 valuation dates");
+        }
         Portfolio p = ownPortfolio(portfolioId);
         if (!p.isHoldingsSaved()) throw new PortfolioValidationException("Save portfolio holdings before opening the historical dashboard");
         ensureTradeHistory(p);
         LocalDate purchase = p.getPurchaseDate();
-        LocalDate requested = requestedDate == null ? LocalDate.now() : requestedDate;
-        if (requested.isBefore(purchase)) throw new PortfolioValidationException("Dashboard date cannot be before the purchase date");
-        List<PortfolioTrade> history = trades.findByPortfolioIdAndTradeDateLessThanEqualOrderByTradeDateAscIdAsc(portfolioId, requested);
+        List<LocalDate> dates = requestedDates.stream().distinct().sorted().toList();
+        dates.forEach(date -> {
+            if (date.isBefore(purchase)) throw new PortfolioValidationException("Dashboard date cannot be before the purchase date");
+        });
+        List<PortfolioTrade> allTrades = trades.findAllByPortfolioId(portfolioId).stream()
+                .sorted(Comparator.comparing(PortfolioTrade::getTradeDate).thenComparing(PortfolioTrade::getId))
+                .toList();
+        Map<Long, SecurityDetails> securitiesById = new HashMap<>();
+        Map<Long, List<DailyPrice>> pricesBySecurity = new HashMap<>();
+        for (PortfolioTrade trade : allTrades) {
+            Long securityId = trade.getSecurityId() == null
+                    ? securityService.tradeSecurityId(trade) : trade.getSecurityId();
+            if (!securitiesById.containsKey(securityId)) {
+                securitiesById.put(securityId, securityService.resolveTrade(trade));
+                pricesBySecurity.put(securityId, prices.findBySecurityId(securityId));
+            }
+        }
+        Set<LocalDate> availableDates = new TreeSet<>();
+        availableDates.add(purchase);
+        pricesBySecurity.values().stream().flatMap(List::stream)
+                .map(DailyPrice::getTradeDate).filter(date -> !date.isBefore(purchase)).forEach(availableDates::add);
+        List<ThemeAllocation> themeAllocations = p.getTheme() == null ? List.of()
+                : themes.findByTheme(p.getTheme()).orElseThrow().getAllocations();
+        List<LocalDate> portfolioDates = List.copyOf(availableDates);
+        return dates.stream()
+                .map(date -> calculateValuation(p, date, allTrades, securitiesById,
+                        pricesBySecurity, themeAllocations, portfolioDates))
+                .toList();
+    }
+
+    private PortfolioValuationResponse calculateValuation(Portfolio p, LocalDate requested,
+            List<PortfolioTrade> allTrades, Map<Long, SecurityDetails> securitiesById,
+            Map<Long, List<DailyPrice>> pricesBySecurity, List<ThemeAllocation> themeAllocations,
+            List<LocalDate> portfolioDates) {
+        LocalDate purchase = p.getPurchaseDate();
+        List<PortfolioTrade> history = allTrades.stream().filter(trade -> !trade.getTradeDate().isAfter(requested)).toList();
         if (history.isEmpty()) throw new PortfolioValidationException("No portfolio trades exist on or before this date");
         Map<Long, BigDecimal> quantities = new LinkedHashMap<>();
         Map<Long, PortfolioTrade> metadata = new HashMap<>();
         Map<Long, BigDecimal> costs = new HashMap<>();
         Map<Long, BigDecimal> bought = new HashMap<>();
         for (PortfolioTrade t : history) {
-            Long securityId = securityService.tradeSecurityId(t);
-            quantities.merge(securityId, t.getSignedShares(), BigDecimal::add); metadata.put(securityId, t);
-            if (t.getSignedShares().signum() > 0) { costs.merge(securityId, t.getSignedShares().multiply(t.getUnitPrice()), BigDecimal::add); bought.merge(securityId, t.getSignedShares(), BigDecimal::add); }
+            Long securityId = t.getSecurityId() == null
+                    ? securityService.tradeSecurityId(t) : t.getSecurityId();
+            quantities.merge(securityId, t.getSignedShares(), BigDecimal::add); 
+            metadata.put(securityId, t);
+            if (t.getSignedShares().signum() > 0) { 
+                costs.merge(securityId, t.getSignedShares()
+                                        .multiply(t.getUnitPrice()), BigDecimal::add); 
+            bought.merge(securityId, t.getSignedShares(), BigDecimal::add); 
+        }
         }
         List<PortfolioValuationResponse.HoldingValuation> output = new ArrayList<>();
         Map<AssetClass, BigDecimal> classValues = new EnumMap<>(AssetClass.class);
@@ -185,8 +261,13 @@ public class PortfolioHoldingService {
         for (var entry : quantities.entrySet()) {
             if (entry.getValue().signum() <= 0) continue;
             PortfolioTrade t = metadata.get(entry.getKey());
-            SecurityDetails security = securityService.resolveTrade(t);
-            DailyPrice daily = securityService.priceOnOrBefore(security.getSecurityId(), requested);
+            SecurityDetails security = securitiesById.get(entry.getKey());
+            if (security == null) throw new SecurityNotFoundException(String.valueOf(entry.getKey()));
+            DailyPrice daily = pricesBySecurity.getOrDefault(entry.getKey(), List.of()).stream()
+                    .filter(price -> !price.getTradeDate().isAfter(requested))
+                    .max(Comparator.comparing(DailyPrice::getTradeDate))
+                    .orElseThrow(() -> new PortfolioValidationException(
+                            "No historical price is available on or before " + requested));
             BigDecimal currentPrice = securityService.priceValue(daily), value = currentPrice.multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal averageCost = bought.getOrDefault(entry.getKey(), ZERO).signum() == 0 ? ZERO : costs.get(entry.getKey()).divide(bought.get(entry.getKey()), 6, RoundingMode.HALF_UP);
             BigDecimal gain = currentPrice.subtract(averageCost).multiply(entry.getValue()).setScale(2, RoundingMode.HALF_UP);
@@ -194,24 +275,22 @@ public class PortfolioHoldingService {
             classValues.merge(t.getAssetClass(), value, BigDecimal::add); total = total.add(value); totalCost = totalCost.add(averageCost.multiply(entry.getValue()));
             if (daily.getTradeDate().isBefore(effective)) effective = daily.getTradeDate();
         }
-        BigDecimal portfolioAmount = p.getAmount();
-        BigDecimal residualCash = portfolioAmount.subtract(total).max(ZERO);
+        BigDecimal residualCash = p.getAmount().subtract(total).max(ZERO);
         if (residualCash.signum() > 0) {
             classValues.merge(AssetClass.CASH, residualCash, BigDecimal::add);
             total = total.add(residualCash);
             totalCost = totalCost.add(residualCash);
         }
         List<PortfolioValuationResponse.AllocationDrift> allocation = new ArrayList<>();
-        if (p.getTheme() != null) {
-            for (ThemeAllocation target : themes.findByTheme(p.getTheme()).orElseThrow().getAllocations()) {
-                BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.getAssetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
-                BigDecimal targetPct = target.getPercentage();
-                BigDecimal drift = current.subtract(targetPct).setScale(2, RoundingMode.HALF_UP);
-                allocation.add(new PortfolioValuationResponse.AllocationDrift(target.getAssetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
-            }
+        for (ThemeAllocation target : themeAllocations) {
+            BigDecimal current = total.signum() == 0 ? ZERO : classValues.getOrDefault(target.getAssetClass(), ZERO).multiply(HUNDRED).divide(total, 2, RoundingMode.HALF_UP);
+            BigDecimal targetPct = target.getPercentage();
+            BigDecimal drift = current.subtract(targetPct).setScale(2, RoundingMode.HALF_UP);
+            allocation.add(new PortfolioValuationResponse.AllocationDrift(target.getAssetClass(), targetPct, current, drift, exceedsDriftLimit(drift)));
         }
+        
         BigDecimal gains = total.subtract(totalCost).setScale(2, RoundingMode.HALF_UP);
-        return new PortfolioValuationResponse(purchase, requested, effective, total.setScale(2, RoundingMode.HALF_UP), gains, output, allocation, availableDates(portfolioId, purchase));
+        return new PortfolioValuationResponse(purchase, requested, effective, total.setScale(2, RoundingMode.HALF_UP), gains, output, allocation, portfolioDates);
     }
 
     static boolean exceedsDriftLimit(BigDecimal drift) {
@@ -286,6 +365,9 @@ public class PortfolioHoldingService {
             BigDecimal signedShares = order.getValue();
             if (signedShares.signum() == 0) continue;
             SecurityDetails security = securities.findById(order.getKey()).orElseThrow(() -> new SecurityNotFoundException(String.valueOf(order.getKey())));
+            if (signedShares.signum() > 0 && isExcludedExchange(security.getExchange())) {
+                throw new PortfolioValidationException("Securities listed on LSE or NASDAQ cannot be added to holdings");
+            }
             BigDecimal afterTrade = quantitiesAtTradeDate.getOrDefault(order.getKey(), ZERO).add(signedShares);
             if (afterTrade.signum() < 0) throw new PortfolioValidationException("Cannot sell more shares than the portfolio owns: " + security.getSymbol());
             AssetClass assetClass = securityService.assetClass(security.getAssetType());
@@ -345,16 +427,6 @@ public class PortfolioHoldingService {
         refreshHoldingSnapshots(portfolioId);
     }
 
-    private List<LocalDate> availableDates(Long portfolioId, LocalDate purchase) {
-        Set<LocalDate> dates = new TreeSet<>();
-        dates.add(purchase);
-        for (PortfolioTrade trade : trades.findAllByPortfolioId(portfolioId)) {
-            securityService.resolveTrade(trade);
-            prices.findBySecurityId(securityService.tradeSecurityId(trade)).stream()
-                    .map(DailyPrice::getTradeDate).filter(d -> !d.isBefore(purchase)).forEach(dates::add);
-        }
-        return List.copyOf(dates);
-    }
     private void ensureTradeHistory(Portfolio portfolio) {
         if (trades.existsByPortfolioId(portfolio.getId())) return;
         List<PortfolioHolding> existing = holdings.findByPortfolioId(portfolio.getId());
@@ -403,6 +475,10 @@ public class PortfolioHoldingService {
     }
 
     private record RebalanceTrade(SecurityDetails security, AssetClass assetClass, BigDecimal signedShares, BigDecimal unitPrice) {}
+
+    private boolean isExcludedExchange(String exchange) {
+        return exchange != null && (exchange.equalsIgnoreCase("LSE") || exchange.equalsIgnoreCase("NASDAQ"));
+    }
 
     private Portfolio ownPortfolio(Long id) {
         if (id == null) throw new PortfolioValidationException("Portfolio id is required");

@@ -8,6 +8,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -57,11 +60,9 @@ public class SecurityDetails {
     @Column(name = "currency", length = 10)
     private String currency;
 
-    @Column(name = "sector", length = 100)
-    private String sector;
-
-    @Column(name = "industry", length = 100)
-    private String industry;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gics_industry_code", referencedColumnName = "industry_code")
+    private GicsIndustry gicsIndustry;
 
     @Column(name = "logo_url", length = 500)
     private String logoUrl;

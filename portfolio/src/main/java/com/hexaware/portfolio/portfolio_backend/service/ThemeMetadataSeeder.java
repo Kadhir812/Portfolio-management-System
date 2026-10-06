@@ -53,9 +53,33 @@ public class ThemeMetadataSeeder implements CommandLineRunner {
     }
 
     private void seedEquityAllocations(ThemeDefinition theme) {
-        addEquityAllocation(theme, EquityCategory.LARGE_CAP, new BigDecimal("60"));
-        addEquityAllocation(theme, EquityCategory.MID_CAP, new BigDecimal("25"));
-        addEquityAllocation(theme, EquityCategory.SMALL_CAP, new BigDecimal("15"));
+        List<EquityTargetData> targets = switch (theme.getTheme()) {
+            case CONSERVATIVE -> List.of(
+                    equityTarget(EquityCategory.LARGE_CAP, "66.67"),
+                    equityTarget(EquityCategory.MID_CAP, "26.66"),
+                    equityTarget(EquityCategory.SMALL_CAP, "6.67"));
+            case MODERATELY_CONSERVATIVE -> List.of(
+                    equityTarget(EquityCategory.LARGE_CAP, "60"),
+                    equityTarget(EquityCategory.MID_CAP, "28"),
+                    equityTarget(EquityCategory.SMALL_CAP, "12"));
+            case AGGRESSIVE -> List.of(
+                    equityTarget(EquityCategory.LARGE_CAP, "55.56"),
+                    equityTarget(EquityCategory.MID_CAP, "28.89"),
+                    equityTarget(EquityCategory.SMALL_CAP, "15.55"));
+            case MODERATELY_AGGRESSIVE -> List.of(
+                    equityTarget(EquityCategory.LARGE_CAP, "45.45"),
+                    equityTarget(EquityCategory.MID_CAP, "32.73"),
+                    equityTarget(EquityCategory.SMALL_CAP, "21.82"));
+            case VERY_AGGRESSIVE -> List.of(
+                    equityTarget(EquityCategory.LARGE_CAP, "35.29"),
+                    equityTarget(EquityCategory.MID_CAP, "35.29"),
+                    equityTarget(EquityCategory.SMALL_CAP, "29.42"));
+        };
+        targets.forEach(target -> addEquityAllocation(theme, target.category(), target.percentage()));
+    }
+
+    private EquityTargetData equityTarget(EquityCategory category, String percentage) {
+        return new EquityTargetData(category, new BigDecimal(percentage));
     }
 
     private void addEquityAllocation(ThemeDefinition theme, EquityCategory category, BigDecimal percentage) {
@@ -137,5 +161,8 @@ public class ThemeMetadataSeeder implements CommandLineRunner {
     }
 
     private record AllocationData(AssetClass assetClass, BigDecimal percentage) {
+    }
+
+    private record EquityTargetData(EquityCategory category, BigDecimal percentage) {
     }
 }

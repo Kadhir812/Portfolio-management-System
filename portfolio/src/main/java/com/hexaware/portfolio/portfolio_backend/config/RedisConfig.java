@@ -18,6 +18,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import com.hexaware.portfolio.benchmark.dto.BenchmarkComparisonResponse;
 import com.hexaware.portfolio.benchmark.dto.BenchmarkResponse;
+import com.hexaware.portfolio.security.dto.SecurityMasterResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,9 @@ public class RedisConfig implements CachingConfigurer {
                 objectMapper, objectMapper.getTypeFactory().constructType(BenchmarkResponse.class));
         var benchmarkPricesSerializer = new JacksonJsonRedisSerializer<Object>(
                 objectMapper, objectMapper.getTypeFactory().constructType(BenchmarkComparisonResponse.class));
+        var securityListType = objectMapper.getTypeFactory()
+                .constructCollectionType(List.class, SecurityMasterResponse.class);
+        var securityListSerializer = new JacksonJsonRedisSerializer<Object>(objectMapper, securityListType);
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(cacheDefaults)
@@ -53,6 +57,9 @@ public class RedisConfig implements CachingConfigurer {
                         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(benchmarkResponseSerializer)))
                 .withCacheConfiguration("benchmark-prices", cacheDefaults
                         .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(benchmarkPricesSerializer)))
+                .withCacheConfiguration("security-master", cacheDefaults
+                        .entryTtl(Duration.ofMinutes(5))
+                        .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(securityListSerializer)))
                 .build();
     }
 

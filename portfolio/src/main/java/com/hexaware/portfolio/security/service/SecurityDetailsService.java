@@ -3,6 +3,7 @@ package com.hexaware.portfolio.security.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import com.hexaware.portfolio.security.entity.SecurityDetails;
@@ -40,10 +41,12 @@ public class SecurityDetailsService {
         return repo.findAll();
     }
 
+    @CacheEvict(cacheNames = "security-master", allEntries = true)
     public SecurityDetails save(SecurityDetails entity) {
         return repo.save(entity);
     }
 
+    @CacheEvict(cacheNames = "security-master", allEntries = true)
     public List<SecurityDetails> saveAll(List<SecurityDetails> entities) {
         return repo.saveAll(entities);
     }

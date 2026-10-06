@@ -7,6 +7,14 @@ CREATE DATABASE IF NOT EXISTS portfolio_db
 
 USE portfolio_db;
 
+CREATE TABLE IF NOT EXISTS gics_industries (
+    industry_code CHAR(6) NOT NULL,
+    sector_code CHAR(2) NOT NULL,
+    sector_name VARCHAR(100) NOT NULL,
+    industry_name VARCHAR(120) NOT NULL,
+    PRIMARY KEY (industry_code)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS app_users (
     id BIGINT NOT NULL AUTO_INCREMENT,
     email VARCHAR(254) NOT NULL,
@@ -29,8 +37,7 @@ CREATE TABLE IF NOT EXISTS security_details (
     description VARCHAR(500) NULL,
     exchange VARCHAR(30) NULL,
     currency VARCHAR(10) NULL,
-    sector VARCHAR(100) NULL,
-    industry VARCHAR(100) NULL,
+    gics_industry_code CHAR(6) NULL,
     logo_url VARCHAR(500) NULL,
     website_url VARCHAR(500) NULL,
     country VARCHAR(100) NULL,
@@ -41,6 +48,9 @@ CREATE TABLE IF NOT EXISTS security_details (
     updated_at DATETIME(6) NULL,
     PRIMARY KEY (security_id),
     CONSTRAINT uq_security_details_isin UNIQUE (isin),
+    CONSTRAINT fk_security_details_gics_industry FOREIGN KEY (gics_industry_code)
+        REFERENCES gics_industries (industry_code)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT ck_security_details_asset_type CHECK (
         asset_type IN ('EQUITY', 'MUTUAL', 'COMMODITY', 'BOND', 'CRYPTO', 'REIT', 'ETF', 'CASH')
     )
@@ -48,13 +58,7 @@ CREATE TABLE IF NOT EXISTS security_details (
 
 CREATE TABLE IF NOT EXISTS investment_themes (
     id BIGINT NOT NULL AUTO_INCREMENT,
-    theme_code ENUM(
-        'CONSERVATIVE',
-        'MODERATELY_CONSERVATIVE',
-        'AGGRESSIVE',
-        'MODERATELY_AGGRESSIVE',
-        'VERY_AGGRESSIVE'
-    ) NOT NULL,
+    theme_code VARCHAR(40) NOT NULL,
     label VARCHAR(255) NOT NULL,
     risk VARCHAR(255) NOT NULL,
     investment_horizon VARCHAR(255) NOT NULL,
@@ -84,22 +88,16 @@ CREATE TABLE IF NOT EXISTS portfolios (
     id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
-    type ENUM('WEIGHTAGE', 'AMOUNT') NOT NULL,
-    currency ENUM('INR', 'USD', 'GBP') NOT NULL,
-    benchmark ENUM('NIFTY50', 'NASDAQ', 'SMP500', 'NASDAQ100', 'SENSEX', 'FTSE100', 'DAX') NOT NULL,
-    exchange ENUM('NSE', 'BSE') NOT NULL,
-    rebalance_frequency ENUM('DAILY', 'WEEKLY', 'MONTHLY') NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    currency VARCHAR(20) NOT NULL,
+    benchmark VARCHAR(30) NOT NULL,
+    exchange VARCHAR(10) NOT NULL,
+    rebalance_frequency VARCHAR(20) NOT NULL,
     amount DECIMAL(20,2) NOT NULL,
-    theme ENUM(
-        'CONSERVATIVE',
-        'MODERATELY_CONSERVATIVE',
-        'AGGRESSIVE',
-        'MODERATELY_AGGRESSIVE',
-        'VERY_AGGRESSIVE'
-    ) NULL,
+    theme VARCHAR(40) NULL,
     purchase_date DATE NOT NULL,
     holdings_saved BOOLEAN NOT NULL DEFAULT FALSE,
-    status ENUM('NEW', 'ACTIVE', 'CLOSED') NOT NULL DEFAULT 'NEW',
+    status VARCHAR(20) NOT NULL DEFAULT 'NEW',
     created_at DATETIME(6) NULL,
     updated_at DATETIME(6) NULL,
     PRIMARY KEY (id),
@@ -117,7 +115,7 @@ CREATE TABLE IF NOT EXISTS portfolios (
 CREATE TABLE IF NOT EXISTS theme_allocations (
     id BIGINT NOT NULL AUTO_INCREMENT,
     theme_id BIGINT NOT NULL,
-    asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    asset_class VARCHAR(40) NOT NULL,
     percentage DECIMAL(5,2) NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT uq_theme_allocations_theme_asset UNIQUE (theme_id, asset_class),
@@ -147,7 +145,7 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
     isin VARCHAR(255) NULL,
     security_name VARCHAR(255) NULL,
     symbol VARCHAR(255) NULL,
-    asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    asset_class VARCHAR(40) NOT NULL,
     equity_category VARCHAR(30) NULL,
     shares DECIMAL(24,8) NOT NULL,
     price DECIMAL(20,6) NOT NULL,
@@ -173,7 +171,7 @@ CREATE TABLE IF NOT EXISTS portfolio_trades (
     isin VARCHAR(255) NULL,
     symbol VARCHAR(255) NULL,
     security_name VARCHAR(255) NULL,
-    asset_class ENUM('STOCKS', 'MUTUAL_FUNDS', 'COMMODITIES', 'BONDS', 'CRYPTO', 'REITS', 'ETFS', 'CASH') NOT NULL,
+    asset_class VARCHAR(40) NOT NULL,
     equity_category VARCHAR(30) NULL,
     signed_shares DECIMAL(24,8) NOT NULL,
     unit_price DECIMAL(20,6) NOT NULL,

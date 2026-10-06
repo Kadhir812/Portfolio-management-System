@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hexaware.portfolio.portfolio_backend.dto.AddSecurityRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.EligibleSecurityResponse;
 import com.hexaware.portfolio.portfolio_backend.dto.PortfolioHoldingSummaryResponse;
+import com.hexaware.portfolio.portfolio_backend.dto.PortfolioValuationHistoryRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.UpdateHoldingRequest;
 import com.hexaware.portfolio.portfolio_backend.dto.PortfolioValuationResponse;
 import com.hexaware.portfolio.portfolio_backend.dto.RebalanceRequest;
@@ -24,15 +25,14 @@ import com.hexaware.portfolio.portfolio_backend.entity.Portfolio;
 import com.hexaware.portfolio.portfolio_backend.entity.PortfolioHolding;
 import com.hexaware.portfolio.portfolio_backend.service.holdings.PortfolioHoldingService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
+@RequiredArgsConstructor 
 @RequestMapping("/api/portfolios/{portfolioId}/holdings")
 public class PortfolioHoldingController {
 
     private final PortfolioHoldingService holdingService;
-
-    public PortfolioHoldingController(PortfolioHoldingService holdingService) {
-        this.holdingService = holdingService;
-    }
 
     @PostMapping
     public ResponseEntity<PortfolioHolding> addSecurity(
@@ -63,6 +63,13 @@ public class PortfolioHoldingController {
             @PathVariable Long portfolioId,
             @org.springframework.web.bind.annotation.RequestParam(required = false) LocalDate date) {
         return ResponseEntity.ok(holdingService.getValuation(portfolioId, date));
+    }
+
+    @PostMapping("/valuation/history")
+    public ResponseEntity<List<PortfolioValuationResponse>> getValuationHistory(
+            @PathVariable Long portfolioId,
+            @RequestBody PortfolioValuationHistoryRequest request) {
+        return ResponseEntity.ok(holdingService.getValuations(portfolioId, request == null ? null : request.dates()));
     }
 
     @PostMapping("/rebalance")

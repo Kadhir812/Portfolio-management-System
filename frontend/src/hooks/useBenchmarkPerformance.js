@@ -2,16 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import { alignSeries, calcMetrics, canonicalIndex, INDEX_LABELS, monthlyCloses } from '../lib/performance';
 
-// Valuations are fetched a few at a time so the backend isn't flooded.
-async function loadValuations(portfolioId, dates) {
-  const results = [];
-  for (let offset = 0; offset < dates.length; offset += 4) {
-    const batch = await Promise.all(dates.slice(offset, offset + 4).map((date) => api.holdings.valuation(portfolioId, date)));
-    results.push(...batch);
-  }
-  return results;
-}
-
 /** Month-by-month portfolio value vs a benchmark index, plus return/risk metrics. */
 export function useBenchmarkPerformance({ portfolioId, valuation, preferredIndex }) {
   const [index, setIndex] = useState(canonicalIndex(preferredIndex || 'NIFTY50'));
@@ -52,7 +42,7 @@ export function useBenchmarkPerformance({ portfolioId, valuation, preferredIndex
     if (!monthEnds.has(purchaseDate.slice(0, 7))) monthEnds.set(purchaseDate.slice(0, 7), purchaseDate);
     const valuationDates = [...monthEnds.values()].sort().slice(-25);
 
-    Promise.all([api.benchmarks.prices(index, purchaseDate, endDate), loadValuations(portfolioId, valuationDates)])
+    Promise.all([api.benchmarks.prices(index, purchaseDate, endDate), api.holdings.valuations(portfolioId, valuationDates)])
       .then(([comparison, valuations]) => {
         if (!active) return;
         setIndexRows(monthlyCloses((comparison.prices || []).map((price) => ({ date: price.date, close: Number(price.close) }))));
