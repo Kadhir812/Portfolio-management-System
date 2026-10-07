@@ -51,7 +51,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable())// Safe because application uses stateless JWT authentication via
+                                        // Authorization headers, not session cookies.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, exception) ->
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required")))

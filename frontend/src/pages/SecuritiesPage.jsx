@@ -74,7 +74,13 @@ export function SecuritiesPage() {
       && (!isinQuery || String(security.isin || '').toLowerCase().includes(isinQuery))
       && (!masterSector || security.sector === masterSector)
       && (!masterIndustry || security.industry === masterIndustry)
-    );
+    ).sort((a, b) => {
+      const exchangeA = String(a.exchange || 'ZZZ').trim();
+      const exchangeB = String(b.exchange || 'ZZZ').trim();
+      const exchangeCompare = exchangeA.localeCompare(exchangeB, undefined, { sensitivity: 'base' });
+      if (exchangeCompare !== 0) return exchangeCompare;
+      return String(a.symbol || '').localeCompare(String(b.symbol || ''), undefined, { sensitivity: 'base' });
+    });
   }, [master, masterExchange, masterIsin, masterSector, masterIndustry]);
   const idLabel = isLse(exchange) ? 'CUPID' : 'ISIN';
 

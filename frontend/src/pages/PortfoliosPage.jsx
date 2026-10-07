@@ -6,7 +6,6 @@ import { GridCard } from '../components/grid/GridCard';
 import { Pill, actionsCol, moneyCol, textCol } from '../components/grid/columns';
 import { Notice } from '../components/Notice';
 import { PageHeader } from '../components/PageHeader';
-import { StatTile } from '../components/StatTile';
 import { Button, buttonVariants } from '../components/ui/button';
 import { compactMoney, titleCase } from '../lib/format';
 
@@ -84,6 +83,7 @@ export function PortfoliosPage() {
 
   const active = rows.filter((p) => p.status === 'ACTIVE');
   const invested = rows.reduce((sum, p) => sum + p.amount, 0);
+  const waiting = rows.filter((p) => p.status === 'NEW').length;
 
   return (
     <>
@@ -91,13 +91,6 @@ export function PortfoliosPage() {
         <Link to="/portfolios/new" className={buttonVariants()}><Plus /> Create portfolio</Link>
       </PageHeader>
       <Notice tone="error">{error}</Notice>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Portfolios" value={rows.length} />
-        <StatTile label="Active" value={active.length} tone={active.length ? 'pos' : undefined} />
-        <StatTile label="Not started" value={rows.filter((p) => p.status === 'NEW').length} sub="Waiting for holdings" />
-        <StatTile label="Total invested" value={compactMoney(invested)} sub="Across all portfolios" />
-      </div>
 
       <GridCard
         title="All portfolios"
@@ -109,6 +102,14 @@ export function PortfoliosPage() {
         height={Math.min(Math.max(rows.length * 46 + 130, 300), 560)}
         emptyMessage="No portfolios yet. Create one to start tracking allocations."
         onRowDoubleClicked={({ data }) => navigate(`/portfolios/${data.id}`)}
+        toolbar={(
+          <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground sm:text-sm">
+            <span><strong className="font-semibold text-foreground">{rows.length}</strong> portfolios</span>
+            <span><strong className="font-semibold text-foreground">{active.length}</strong> active</span>
+            <span><strong className="font-semibold text-foreground">{waiting}</strong> waiting</span>
+            <span><strong className="font-semibold text-foreground">{compactMoney(invested)}</strong> invested</span>
+          </div>
+        )}
       />
     </>
   );

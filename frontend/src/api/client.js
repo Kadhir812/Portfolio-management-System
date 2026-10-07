@@ -62,6 +62,7 @@ export const api = {
 		updateEquityAllocations: async (theme, allocations) => (await client.put(`/themes/${theme}/equity-allocations`, { allocations })).data,
 		update: async (theme, payload) => (await client.put(`/themes/${theme}`, payload)).data,
 		updateDefinition: async (theme, payload) => (await client.put(`/themes/${theme}/definition`, payload)).data,
+		deleteDefinition: async (theme) => client.delete(`/themes/${theme}`),
 		remove: async (portfolioId) => client.delete(`/portfolios/${portfolioId}/theme`)
 	},
 	assetClasses: {

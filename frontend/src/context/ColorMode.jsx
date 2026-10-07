@@ -1,13 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'portfolio_color_mode';
-const ColorModeContext = createContext({ mode: 'dark', toggle: () => {} });
+const ColorModeContext = createContext({ mode: 'light', toggle: () => {} });
 
 const readSaved = () => {
-  try { return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 };
 
-/** Holds "light" or "dark", saves it, and puts the `dark` class on <html> (the CSS tokens key off that class). */
+/** Default app theme is white; dark mode remains available only if explicitly restored from storage. */
 export function ColorModeProvider({ children }) {
   const [mode, setMode] = useState(readSaved);
 
@@ -16,7 +20,7 @@ export function ColorModeProvider({ children }) {
     try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* private mode: just don't remember it */ }
   }, [mode]);
 
-  const toggle = useCallback(() => setMode((current) => (current === 'dark' ? 'light' : 'dark')), []);
+  const toggle = useCallback(() => setMode('light'), []);
   const value = useMemo(() => ({ mode, toggle }), [mode, toggle]);
   return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;
 }

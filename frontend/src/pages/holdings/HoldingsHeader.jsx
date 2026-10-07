@@ -16,9 +16,6 @@ export function HoldingsHeader({ portfolio, theme, busy, onSave }) {
       )}
     >
       {theme?.label && <Badge variant="info">{theme.label}</Badge>}
-      {portfolio?.holdingsSaved && (
-        <Link to={`/portfolios/${portfolio.id}`} className={buttonVariants({ variant: 'outline' })}>Dashboard</Link>
-      )}
       <Button onClick={onSave} disabled={!portfolio || busy}>
         <Check /> {portfolio?.holdingsSaved ? 'Done' : 'Save holdings'}
       </Button>

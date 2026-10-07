@@ -108,6 +108,16 @@ class ThemeServiceTest {
 		verify(portfolios).save(portfolio);
 	}
 
+	@Test
+	void deleteThemeRemovesThemeDefinitionWhenConfigured() {
+		ThemeDefinition theme = themeDefinition();
+		when(themes.findByTheme(InvestmentThemes.CONSERVATIVE)).thenReturn(Optional.of(theme));
+
+		service.deleteTheme(InvestmentThemes.CONSERVATIVE);
+
+		verify(themes).delete(theme);
+	}
+
 	private Portfolio ownedPortfolio(Long id) {
 		return Portfolio.builder().id(id).owner(owner).build();
 	}

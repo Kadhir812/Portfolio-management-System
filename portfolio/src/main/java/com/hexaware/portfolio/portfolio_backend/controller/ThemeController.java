@@ -39,6 +39,12 @@ public class ThemeController {
         return ResponseEntity.ok(themeService.updateDefinition(theme, request));
     }
 
+    @DeleteMapping("/themes/{theme}")
+    public ResponseEntity<Void> deleteThemeDefinition(@PathVariable InvestmentThemes theme) {
+        themeService.deleteTheme(theme);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/portfolios/{portfolioId}/theme")
     public ResponseEntity<Portfolio> attachTheme(
             @PathVariable Long portfolioId,

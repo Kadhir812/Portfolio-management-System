@@ -1,5 +1,4 @@
 import { LockKeyhole } from 'lucide-react';
-import { ColorModeToggle } from './ColorModeToggle';
 
 export function Brand() {
   return (
@@ -14,7 +13,6 @@ export function Brand() {
 export function AuthShell({ title, description, footer, children }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-5 py-10">
-      <div className="fixed right-5 top-4"><ColorModeToggle /></div>
       <div className="w-full max-w-md">
         <Brand />
         <div className="mt-8 rounded-2xl border border-border bg-card p-7 sm:p-9">

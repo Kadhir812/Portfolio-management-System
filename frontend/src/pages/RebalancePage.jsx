@@ -45,6 +45,22 @@ export function RebalancePage() {
     [valuation, orders, portfolio]
   );
 
+  const investedValue = useMemo(() => {
+    if (!valuation?.holdings?.length) return 0;
+    return valuation.holdings.reduce((sum, holding) => sum + Number(holding.value || 0), 0);
+  }, [valuation]);
+
+  const cashBalance = useMemo(() => {
+    if (!valuation) return 0;
+    return Math.max(Number(valuation.totalValue || 0) - investedValue, 0);
+  }, [valuation, investedValue]);
+
+  const portfolioAmount = useMemo(() => Number(portfolio?.amount || 0), [portfolio]);
+  const totalReturns = useMemo(() => Number(valuation?.totalGain || 0), [valuation]);
+  const investedAmount = useMemo(() => Math.max(portfolioAmount - cashBalance, 0), [portfolioAmount, cashBalance]);
+  const portfolioValue = useMemo(() => investedAmount + totalReturns, [investedAmount, totalReturns]);
+  const saleProceeds = useMemo(() => cashBalance + Number(projection?.sellValue || 0), [cashBalance, projection]);
+
   const orderRows = useMemo(() => orders.map((o) => ({
     ...o,
     tradeShares: Math.abs(o.signedShares),
@@ -153,10 +169,7 @@ export function RebalancePage() {
       <PageHeader
         title="Rebalance"
         description={`Proposed buys and sells to restore theme targets, priced on ${formatDate(tradeDate)}.`}
-        back={<Link to={`/portfolios/${id}?date=${tradeDate}`} className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Dashboard</Link>}
-      >
-        <Link to={`/portfolios/${id}/holdings`} className={buttonVariants({ variant: 'outline' })}>Holdings</Link>
-      </PageHeader>
+      />
 
       <Notice tone="error">{error}</Notice>
       {valuation && !valuation.allocations?.length && <Notice tone="warning">Attach a theme to calculate targets before rebalancing.</Notice>}
@@ -164,10 +177,10 @@ export function RebalancePage() {
       {projection && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile label="Portfolio value" value={money(projection.projectedTotal, currency)} sub="After proposed rebalance" />
-            <StatTile label="Invested" value={money(projection.projectedInvested, currency)} sub="After proposed rebalance" />
-            <StatTile label="Cash" value={money(projection.projectedCash, currency)} tone={projection.projectedCash < 0 ? 'neg' : undefined} sub={`${money(projection.cashBefore, currency)} before + proceeds - purchases`} />
-            <StatTile label="Sale proceeds" value={money(projection.sellValue, currency)} sub={`${money(projection.purchaseValue, currency)} purchases`} />
+            <StatTile label="Portfolio value" value={money(portfolioValue, currency)} sub={`Invested ${money(investedAmount, currency)} + returns ${money(totalReturns, currency)}`} />
+            <StatTile label="Invested" value={money(investedAmount, currency)} sub={`Total amount ${money(portfolioAmount, currency)} - cash ${money(cashBalance, currency)}`} />
+            <StatTile label="Cash" value={money(cashBalance, currency)} tone={cashBalance < 0 ? 'neg' : undefined} sub="Unallocated cash balance" />
+            <StatTile label="Sale proceeds" value={money(saleProceeds, currency)} sub={`${money(cashBalance, currency)} cash + ${money(projection.sellValue, currency)} sell proceeds`} />
           </div>
 
           <GridCard

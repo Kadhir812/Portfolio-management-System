@@ -95,6 +95,16 @@ public class ThemeService {
         return toResponse(themeRepository.save(theme));
     }
 
+    @Transactional
+    public void deleteTheme(InvestmentThemes code) {
+        if (code == null) {
+            throw new PortfolioValidationException("Investment theme is required");
+        }
+        ThemeDefinition theme = themeRepository.findByTheme(code)
+                .orElseThrow(() -> new PortfolioValidationException("Investment theme is not configured"));
+        themeRepository.delete(theme);
+    }
+
     public Portfolio attachTheme(Long portfolioId, InvestmentThemes theme) {
         if (theme == null) {
             throw new PortfolioValidationException("Investment theme is required");

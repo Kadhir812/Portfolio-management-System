@@ -21,20 +21,40 @@ public record SecurityMasterResponse(
         String status) {
 
     public static SecurityMasterResponse from(SecurityDetails security) {
+        String symbol = normalize(security.getSymbol(), "UNKNOWN");
+        String name = normalize(security.getName(), "Unnamed security");
+        String description = normalize(security.getDescription(), "No description available");
+        String exchange = normalize(security.getExchange(), "UNKNOWN");
+        String country = normalize(security.getCountry(), "UNKNOWN");
+        String currency = normalize(security.getCurrency(), "USD");
+        String status = normalize(security.getStatus(), "ACTIVE");
+        String series = normalize(security.getSeries(), "-");
+        String isin = normalize(security.getIsin(), "N/A");
+        String sector = security.getGicsIndustry() == null ? "Unclassified" : normalize(security.getGicsIndustry().getSectorName(), "Unclassified");
+        String industry = security.getGicsIndustry() == null ? "Unclassified" : normalize(security.getGicsIndustry().getIndustryName(), "Unclassified");
+
         return new SecurityMasterResponse(
                 security.getSecurityId(),
-                security.getIsin(),
-                security.getSymbol(),
-                security.getSeries(),
-                security.getDescription(),
-                security.getExchange(),
-                security.getCountry(),
-                security.getCurrency(),
-                security.getName(),
+                isin,
+                symbol,
+                series,
+                description,
+                exchange,
+                country,
+                currency,
+                name,
                 AssetClass.from(security.getAssetType()),
                 security.getEquityCategory(),
-                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getSectorName(),
-                security.getGicsIndustry() == null ? null : security.getGicsIndustry().getIndustryName(),
-                security.getStatus());
+                sector,
+                industry,
+                status);
+    }
+
+    private static String normalize(String value, String fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? fallback : trimmed;
     }
 }

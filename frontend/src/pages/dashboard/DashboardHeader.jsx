@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom';
-import { ArrowRightLeft, CalendarDays, Wallet } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 import { Badge } from '../../components/ui/badge';
-import { buttonVariants } from '../../components/ui/button';
 import { formatDate, money, titleCase } from '../../lib/format';
 
 const STATUS_VARIANT = { NEW: 'info', ACTIVE: 'success', CLOSED: 'default' };
@@ -35,14 +33,6 @@ export function DashboardHeader({ portfolio, theme, valuation, dates, selectedDa
           {dates.map((date) => <option key={date} value={date}>{formatDate(date)}</option>)}
         </select>
       </label>
-      <Link to={`/portfolios/${portfolio?.id}/holdings`} className={buttonVariants({ variant: 'outline' })}>
-        <Wallet /> Holdings
-      </Link>
-      {valuation && (
-        <Link to={`/portfolios/${portfolio?.id}/rebalance?date=${valuation.requestedDate}`} className={buttonVariants()}>
-          <ArrowRightLeft /> Rebalance
-        </Link>
-      )}
     </PageHeader>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { GridCard } from '../components/grid/GridCard';
+import { actionsCol } from '../components/grid/columns';
 import { Notice } from '../components/Notice';
 import { PageHeader } from '../components/PageHeader';
 import { ThemeEditor } from '../components/theme/ThemeEditor';
@@ -23,7 +24,32 @@ export function ThemeEditorPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const columns = useMemo(() => themeColumns(), []);
+  const removeTheme = async (theme) => {
+    if (!window.confirm(`Delete "${theme.label}"? This cannot be undone.`)) return;
+    try {
+      setError('');
+      await api.themes.deleteDefinition(theme.theme);
+      setThemes((list) => list.filter((item) => item.theme !== theme.theme));
+      if (selected === theme.theme) {
+        setSelected(null);
+      }
+      if (editing && current && current.theme === theme.theme) {
+        setEditing(false);
+      }
+    } catch (e) {
+      setError(e.message || 'Unable to delete theme');
+    }
+  };
+
+  const columns = useMemo(() => [
+    ...themeColumns(),
+    actionsCol(({ data }) => (
+      <div className="flex gap-1">
+        <Button size="icon" variant="ghost" title="Edit" aria-label={`Edit ${data.label}`} onClick={() => { setSelected(data.theme); setEditing(true); }}><Pencil /></Button>
+        <Button size="icon" variant="ghost" className="text-neg hover:bg-neg/10 hover:text-neg" title="Delete theme" aria-label={`Delete ${data.label}`} onClick={() => removeTheme(data)}><Trash2 /></Button>
+      </div>
+    ), 120)
+  ], [removeTheme]);
   const current = themes.find((theme) => theme.theme === selected);
 
   return (

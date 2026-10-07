@@ -26,7 +26,17 @@ export function DetailsStep({ form, update, isEditing, saving, ready, onSubmit }
         <label className="block md:col-span-2 xl:col-span-1"><span className="field-label">Portfolio name</span>
           <input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Example: Growth Plus" /></label>
         <label className="block"><span className="field-label">Amount to invest</span>
-          <input className="field" type="number" min="0" value={form.amount} onChange={(e) => update('amount', Number(e.target.value))} />
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            value={form.amount === 0 ? '' : form.amount}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              const cleaned = raw === '' ? 0 : Number(raw.replace(/^0+(?=\d)/, ''));
+              update('amount', cleaned);
+            }}
+          />
           <span className="mt-1 block text-xs text-muted-foreground">{money(form.amount, form.currency, 0)}</span></label>
         <label className="block"><span className="field-label">Purchase date</span>
           <input className="field" type="date" value={form.purchaseDate} max={localDateString()} disabled={isEditing} onChange={(e) => update('purchaseDate', e.target.value)} />

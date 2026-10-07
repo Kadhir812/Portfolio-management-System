@@ -27,11 +27,25 @@ public class SecurityMasterController {
     public List<SecurityMasterResponse> list() {
         return securities.findAll().stream()
                 .map(SecurityMasterResponse::from)
-                .sorted(Comparator.comparing(SecurityMasterResponse::exchange,
-                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-                        .thenComparing(SecurityMasterResponse::symbol,
-                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .sorted(Comparator.comparing((SecurityMasterResponse s) -> normalizeExchange(s.exchange()), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing((SecurityMasterResponse s) -> normalizeText(s.symbol()), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing((SecurityMasterResponse s) -> normalizeText(s.name()), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(SecurityMasterResponse::securityId, Comparator.nullsLast(Long::compareTo)))
                 .toList();
+    }
+
+    private String normalizeExchange(String exchange) {
+        if (exchange == null || exchange.isBlank()) {
+            return "ZZZ";
+        }
+        return exchange.trim();
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim();
     }
 
     @GetMapping("/search")
