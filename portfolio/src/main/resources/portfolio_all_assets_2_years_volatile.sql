@@ -55,6 +55,171 @@ FROM (
 ) seed
 WHERE NOT EXISTS (SELECT 1 FROM security_details existing WHERE existing.symbol = seed.symbol);
 
+INSERT INTO security_details (
+	asset_type, equity_category, isin, symbol, series, name, description,
+	exchange, currency, sector, industry, country, market, risk_level, status
+)
+SELECT seed.asset_type, seed.equity_category, seed.isin, seed.symbol, seed.series, seed.name, seed.description,
+	seed.exchange, seed.currency, seed.sector, seed.industry, seed.country, seed.market, seed.risk_level, seed.status
+FROM (
+	SELECT 'EQUITY' AS asset_type, 'LARGE_CAP' AS equity_category, 'GB0009895292' AS isin,
+		'AZN' AS symbol, 'EQ' AS series, 'AstraZeneca' AS name,
+		'Synthetic exchange mock; not verified market history' AS description,
+		'LSE' AS exchange, 'GBP' AS currency, 'Health Care' AS sector, 'Pharmaceuticals' AS industry,
+		'United Kingdom' AS country, 'FTSE 100' AS market, 'HIGH' AS risk_level, 'ACTIVE' AS status
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0005405286', 'HSBA', 'EQ', 'HSBC Holdings',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Banks',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BP6MXD84', 'SHEL', 'EQ', 'Shell',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Energy', 'Integrated Oil and Gas',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B10RZP78', 'ULVR', 'EQ', 'Unilever',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Consumer Staples', 'Household Products',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B63H8491', 'RR.', 'EQ', 'Rolls-Royce Holdings',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Industrials', 'Aerospace and Defense',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US0378331005', 'AAPL', 'EQ', 'Apple',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Technology Hardware',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US5949181045', 'MSFT', 'EQ', 'Microsoft',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Software',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US0231351067', 'AMZN', 'EQ', 'Amazon',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Discretionary', 'Broadline Retail',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US67066G1040', 'NVDA', 'EQ', 'NVIDIA',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US30303M1027', 'META', 'EQ', 'Meta Platforms',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Communication Services', 'Interactive Media',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BN7SWP63', 'GSK', 'EQ', 'GSK',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Health Care', 'Pharmaceuticals',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0007980591', 'BP.', 'EQ', 'BP',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Energy', 'Integrated Oil and Gas',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0031348658', 'BARC', 'EQ', 'Barclays',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Banks',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0008706128', 'LLOY', 'EQ', 'Lloyds Banking Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Banks',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BDR05C01', 'NG.', 'EQ', 'National Grid',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Utilities', 'Multi-Utilities',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BSZBP530', 'REL', 'EQ', 'Reckitt',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Consumer Staples', 'Household Products',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0002875804', 'BATS', 'EQ', 'British American Tobacco',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Consumer Staples', 'Tobacco',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0002374006', 'DGE', 'EQ', 'Diageo',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Consumer Staples', 'Beverages',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B1XZS820', 'AAL', 'EQ', 'Anglo American',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Materials', 'Metals and Mining',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0007188757', 'RIO', 'EQ', 'Rio Tinto',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Materials', 'Metals and Mining',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B0SWJX34', 'LSEG', 'EQ', 'London Stock Exchange Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Financial Exchanges',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0007099541', 'PRU', 'EQ', 'Prudential',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Insurance',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BH4HKS39', 'VOD', 'EQ', 'Vodafone Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Communication Services', 'Telecommunications',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B7KR2P84', 'EZJ', 'EQ', 'easyJet',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Industrials', 'Airlines',
+		'United Kingdom', 'FTSE 250', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00BWFY5505', 'IAG', 'EQ', 'International Consolidated Airlines Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Industrials', 'Airlines',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB00B1YW4409', 'III', 'EQ', '3i Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Financials', 'Investment Companies',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'IE0001827041', 'CRH', 'EQ', 'CRH plc',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Materials', 'Construction Materials',
+		'Ireland', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0007908733', 'SSE', 'EQ', 'SSE plc',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Utilities', 'Electric Utilities',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0004544929', 'IMB', 'EQ', 'Imperial Brands',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Consumer Staples', 'Tobacco',
+		'United Kingdom', 'FTSE 100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'GB0000536739', 'AHT', 'EQ', 'Ashtead Group',
+		'Synthetic exchange mock; not verified market history', 'LSE', 'GBP', 'Industrials', 'Rental and Leasing Services',
+		'United Kingdom', 'FTSE 100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US02079K3059', 'GOOGL', 'EQ', 'Alphabet Class A',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Communication Services', 'Interactive Media',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US11135F1012', 'AVGO', 'EQ', 'Broadcom',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US22160K1051', 'COST', 'EQ', 'Costco Wholesale',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Staples', 'Consumer Retail',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US88160R1014', 'TSLA', 'EQ', 'Tesla',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Discretionary', 'Automobiles',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US64110L1061', 'NFLX', 'EQ', 'Netflix',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Communication Services', 'Entertainment',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US0079031078', 'AMD', 'EQ', 'Advanced Micro Devices',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US7134481081', 'PEP', 'EQ', 'PepsiCo',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Staples', 'Beverages',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US17275R1023', 'CSCO', 'EQ', 'Cisco Systems',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Communications Equipment',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US00724F1012', 'ADBE', 'EQ', 'Adobe',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Software',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US7475251036', 'QCOM', 'EQ', 'Qualcomm',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US4581401001', 'INTC', 'EQ', 'Intel',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US8825081040', 'TXN', 'EQ', 'Texas Instruments',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Semiconductors',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US0311621009', 'AMGN', 'EQ', 'Amgen',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Health Care', 'Biotechnology',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US46120E6023', 'ISRG', 'EQ', 'Intuitive Surgical',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Health Care', 'Medical Instruments',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US4385161066', 'HON', 'EQ', 'Honeywell International',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Industrials', 'Industrial Conglomerates',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US8552441094', 'SBUX', 'EQ', 'Starbucks',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Discretionary', 'Restaurants',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US09857L1089', 'BKNG', 'EQ', 'Booking Holdings',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Consumer Discretionary', 'Travel Services',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US0530151036', 'ADP', 'EQ', 'Automatic Data Processing',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Industrials', 'Professional Services',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US20030N1019', 'CMCSA', 'EQ', 'Comcast',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Communication Services', 'Telecommunications',
+		'United States', 'NASDAQ-100', 'MEDIUM', 'ACTIVE'
+	UNION ALL SELECT 'EQUITY', 'LARGE_CAP', 'US4612021034', 'INTU', 'EQ', 'Intuit',
+		'Synthetic exchange mock; not verified market history', 'NASDAQ', 'USD', 'Information Technology', 'Software',
+		'United States', 'NASDAQ-100', 'HIGH', 'ACTIVE'
+) seed
+WHERE NOT EXISTS (
+	SELECT 1 FROM security_details existing
+	WHERE existing.exchange = seed.exchange AND existing.symbol = seed.symbol
+);
+
 UPDATE security_details
 SET equity_category = CASE symbol
 	WHEN 'TCS' THEN 'LARGE_CAP'
